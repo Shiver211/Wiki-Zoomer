@@ -39,7 +39,7 @@ public class BlockZoomer extends BlockContainer {
         this.setCreativeTab(CreativeTabs.DECORATIONS);
         this.setTickRandomly(true);
         this.setRegistryName("wikizoomer", (itemOrEntity ? "item_zoomer" : "entity_zoomer"));
-        this.setUnlocalizedName("wikizoomer." + (itemOrEntity ? "item_zoomer" : "entity_zoomer"));
+        this.setTranslationKey("wikizoomer." + (itemOrEntity ? "item_zoomer" : "entity_zoomer"));
         this.itemOrEntity = itemOrEntity;
     }
 

@@ -1,12 +1,15 @@
-[{
-	"modid": "${mod_id}",
-	"name": "${mod_name}",
-	"version": "${mod_version}",
-	"mcversion": "1.12.2",
-	"description": "${mod_description}",
-	"authorList": ["${mod_authors}"],
-	"credits": "${mod_credits}",
-	"url": "${mod_url}",
-	"updateJSON": "${mod_update_json}",
-	"logoFile": "${mod_logo_path}"
-}]
+[
+{
+  "modid": "wikizoomer",
+  "name": "Wiki Zoomer",
+  "description": "A mod which adds blocks that allow players to take isometric screenshots of items, blocks and entities.",
+  "version": "1.0.0",
+  "mcversion": "1.12.2",
+  "url": "",
+  "updateUrl": "",
+  "authorList": ["Alexthe666"],
+  "credits": "",
+  "logoFile": "assets/wikizoomer/textures/wikizoomer.png",
+  "screenshots": []
+}
+]

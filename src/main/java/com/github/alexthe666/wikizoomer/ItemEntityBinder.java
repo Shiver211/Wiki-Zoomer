@@ -28,7 +28,7 @@ public class ItemEntityBinder extends Item {
         this.setMaxStackSize(1);
         this.setCreativeTab(CreativeTabs.MISC);
         this.setRegistryName("wikizoomer", "entity_binder");
-        this.setUnlocalizedName("wikizoomer.entity_binder");
+        this.setTranslationKey("wikizoomer.entity_binder");
         this.addPropertyOverride(new ResourceLocation("bound"), (p_call_1_, p_call_2_, p_call_3_) -> ItemEntityBinder.isEntityBound(p_call_1_) ? 1 : 0);
     }
 

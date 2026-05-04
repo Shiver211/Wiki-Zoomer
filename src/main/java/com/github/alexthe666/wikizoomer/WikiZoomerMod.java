@@ -48,8 +48,12 @@ public class WikiZoomerMod {
     @SubscribeEvent
     public static void registerItems(RegistryEvent.Register<Item> event) {
         event.getRegistry().register(ENTITY_BINDER_ITEM);
-        event.getRegistry().register(new ItemBlock(ITEM_ZOOMER_BLOCK).setRegistryName(ITEM_ZOOMER_BLOCK.getRegistryName()));
-        event.getRegistry().register(new ItemBlock(ENTITY_ZOOMER_BLOCK).setRegistryName(ENTITY_ZOOMER_BLOCK.getRegistryName()));
+        event.getRegistry().register(new ItemBlock(ITEM_ZOOMER_BLOCK)
+                .setRegistryName(ITEM_ZOOMER_BLOCK.getRegistryName())
+                .setTranslationKey("wikizoomer.item_zoomer"));
+        event.getRegistry().register(new ItemBlock(ENTITY_ZOOMER_BLOCK)
+                .setRegistryName(ENTITY_ZOOMER_BLOCK.getRegistryName())
+                .setTranslationKey("wikizoomer.entity_zoomer"));
         PROXY.onBlockRegister();
     }
 
