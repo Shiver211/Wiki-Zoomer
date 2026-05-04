@@ -12,11 +12,16 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.text.TextComponentString;
 import net.minecraftforge.fml.client.config.GuiSlider;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 
 import java.util.List;
+
+import com.github.alexthe666.wikizoomer.client.ExportManager;
+import com.github.alexthe666.wikizoomer.client.ExportTask;
+import com.github.alexthe666.wikizoomer.client.GuiBatchExport;
 
 @SideOnly(Side.CLIENT)
 public class GuiItemZoomer extends GuiScreen {
@@ -61,6 +66,8 @@ public class GuiItemZoomer extends GuiScreen {
         int j = (this.height - 166) / 2;
         String exit = I18n.format("gui.wikizoomer.close");
         String greenscreen = I18n.format("gui.wikizoomer.greenscreen");
+        String exportPng = I18n.format("gui.wikizoomer.export_png");
+        String batchExport = I18n.format("gui.wikizoomer.batch_export");
         int maxLength = 120;
         net.minecraft.client.gui.GuiSlider.FormatHelper formatHelper = new net.minecraft.client.gui.GuiSlider.FormatHelper() {
             @Override
@@ -72,12 +79,15 @@ public class GuiItemZoomer extends GuiScreen {
         slider.width = 120;
         slider.height = 20;
         this.addButton(slider);
-        this.addButton(new GuiButton(1, i - maxLength / 2, j + 180, maxLength, 20, greenscreen));
-        this.addButton(new GuiButton(2, i - maxLength / 2 + 140, j + 180, maxLength, 20, exit));
-
-        this.buttonList.get(0).enabled = true;
-        this.buttonList.get(1).enabled = true;
-        this.buttonList.get(2).enabled = true;
+        int row1Y = j + 180;
+        int row2Y = j + 202;
+        this.addButton(new GuiButton(1, i - maxLength / 2, row1Y, maxLength, 20, greenscreen));
+        this.addButton(new GuiButton(3, i - maxLength / 2 + 140, row1Y, maxLength, 20, exportPng));
+        this.addButton(new GuiButton(4, i - maxLength / 2, row2Y, maxLength, 20, batchExport));
+        this.addButton(new GuiButton(2, i - maxLength / 2 + 140, row2Y, maxLength, 20, exit));
+        for (GuiButton button : this.buttonList) {
+            button.enabled = true;
+        }
     }
 
     @Override
@@ -87,6 +97,19 @@ public class GuiItemZoomer extends GuiScreen {
         }
         if (button.enabled && button.id == 2) {
             Minecraft.getMinecraft().displayGuiScreen(null);
+        }
+        if (button.enabled && button.id == 3) {
+            ExportTask task = ExportManager.createItemTask(zoomerBase.getStackInSlot(0), sliderValue, greenscreen, false);
+            if (task == null) {
+                if (Minecraft.getMinecraft().player != null) {
+                    Minecraft.getMinecraft().player.sendMessage(new TextComponentString(I18n.format("gui.wikizoomer.export_no_item")));
+                }
+            } else {
+                ExportManager.enqueue(task);
+            }
+        }
+        if (button.enabled && button.id == 4) {
+            Minecraft.getMinecraft().displayGuiScreen(new GuiBatchExport());
         }
         initGui();
     }

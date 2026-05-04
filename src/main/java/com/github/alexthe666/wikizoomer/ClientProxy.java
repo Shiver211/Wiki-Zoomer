@@ -1,5 +1,6 @@
 package com.github.alexthe666.wikizoomer;
 
+import com.github.alexthe666.wikizoomer.client.ExportManager;
 import com.github.alexthe666.wikizoomer.client.GuiEntityZoomer;
 import com.github.alexthe666.wikizoomer.client.GuiItemZoomer;
 import com.github.alexthe666.wikizoomer.client.RenderEntityZoomer;
@@ -18,6 +19,7 @@ import net.minecraftforge.client.model.ModelLoader;
 import net.minecraftforge.fml.client.registry.ClientRegistry;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import net.minecraftforge.fml.common.gameevent.TickEvent;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 
@@ -54,5 +56,13 @@ public class ClientProxy extends CommonProxy {
     @Override
     public void openEntityZoomerGui(TileEntityEntityZoomer tileEntity) {
         Minecraft.getMinecraft().displayGuiScreen(new GuiEntityZoomer(tileEntity));
+    }
+
+    @SubscribeEvent
+    @SideOnly(Side.CLIENT)
+    public void onClientTick(TickEvent.ClientTickEvent event) {
+        if (event.phase == TickEvent.Phase.END) {
+            ExportManager.tick();
+        }
     }
 }
