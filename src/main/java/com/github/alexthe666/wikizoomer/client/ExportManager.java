@@ -168,7 +168,7 @@ public class ExportManager {
             GlStateManager.matrixMode(GL11.GL_PROJECTION);
             GlStateManager.pushMatrix();
             GlStateManager.loadIdentity();
-            GlStateManager.ortho(0.0D, exportSize, exportSize, 0.0D, 1000.0D, 3000.0D);
+            GlStateManager.ortho(0.0D, exportSize, exportSize, 0.0D, -10000.0D, 10000.0D);
             GlStateManager.matrixMode(GL11.GL_MODELVIEW);
             GlStateManager.pushMatrix();
             GlStateManager.loadIdentity();
@@ -218,7 +218,7 @@ public class ExportManager {
 
     private static void renderItem(ItemStack stack, float zoomPercent, int exportSize) {
         float scale = ITEM_BASE_SCALE * (zoomPercent / 100F);
-        float zOffset = 500.0F - (100.0F * scale);
+        float zOffset = 200.0F;
         GlStateManager.enableTexture2D();
         GlStateManager.enableAlpha();
         GlStateManager.alphaFunc(516, 0.1F);
