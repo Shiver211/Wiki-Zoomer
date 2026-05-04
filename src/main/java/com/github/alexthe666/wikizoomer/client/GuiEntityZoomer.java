@@ -90,7 +90,7 @@ public class GuiEntityZoomer extends GuiScreen {
         this.addButton(new GuiButton(3, i - maxLength / 2 + 140, row1Y, maxLength, 20, exportPng));
         this.addButton(new GuiButton(5, i - maxLength / 2, row2Y, maxLength, 20, resolutionLabel));
         this.addButton(new GuiButton(4, i - maxLength / 2 + 140, row2Y, maxLength, 20, batchExport));
-        this.addButton(new GuiButton(2, i - maxLength / 2 + 70, row3Y, maxLength, 20, exit));
+        this.addButton(new GuiButton(2, i - maxLength / 2, row3Y, maxLength, 20, exit));
         for (GuiButton button : this.buttonList) {
             button.enabled = true;
         }

@@ -3,6 +3,7 @@ package com.github.alexthe666.wikizoomer.client;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiListExtended;
+import net.minecraft.client.gui.GuiPageButtonList;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.resources.I18n;
 import net.minecraft.item.Item;
@@ -34,6 +35,21 @@ public class GuiBatchExport extends GuiScreen {
     private ExportTask.Background background = ExportTask.Background.GREENSCREEN;
     private int exportSizeIndex = findDefaultExportSizeIndex();
     private static final int[] EXPORT_SIZES = ExportManager.getExportSizes();
+    private float zoomPercent = 100F;
+    private final GuiPageButtonList.GuiResponder sliderResponder = new GuiPageButtonList.GuiResponder() {
+        @Override
+        public void setEntryValue(int id, boolean value) {
+        }
+
+        @Override
+        public void setEntryValue(int id, float value) {
+            GuiBatchExport.this.setZoomValue(id, value);
+        }
+
+        @Override
+        public void setEntryValue(int id, String value) {
+        }
+    };
     private GuiButton itemsButton;
     private GuiButton entitiesButton;
     private GuiButton backgroundButton;
@@ -47,28 +63,39 @@ public class GuiBatchExport extends GuiScreen {
     public void initGui() {
         super.initGui();
         this.entries = buildEntries();
-        int listTop = 32;
-        int listBottom = this.height - 110;
-        this.modList = new ModListWidget(this.mc, this.width, this.height, listTop, listBottom, 20, this.entries);
         this.buttonList.clear();
-        int buttonWidth = 100;
+        int buttonWidth = 120;
         int buttonHeight = 20;
-        int spacing = 10;
+        int spacing = 20;
         int rowWidth = buttonWidth * 3 + spacing * 2;
         int startX = this.width / 2 - rowWidth / 2;
         int row1Y = this.height - 90;
-        int row2Y = this.height - 65;
-        int row3Y = this.height - 40;
-        this.itemsButton = new GuiButton(0, startX, row1Y, buttonWidth, buttonHeight, "");
-        this.entitiesButton = new GuiButton(1, startX + buttonWidth + spacing, row1Y, buttonWidth, buttonHeight, "");
-        this.backgroundButton = new GuiButton(2, startX + (buttonWidth + spacing) * 2, row1Y, buttonWidth, buttonHeight, "");
-        this.resolutionButton = new GuiButton(3, startX, row2Y, buttonWidth, buttonHeight, "");
-        this.selectAllButton = new GuiButton(4, startX + buttonWidth + spacing, row2Y, buttonWidth, buttonHeight, I18n.format("gui.wikizoomer.batch_select_all"));
-        this.clearButton = new GuiButton(5, startX + (buttonWidth + spacing) * 2, row2Y, buttonWidth, buttonHeight, I18n.format("gui.wikizoomer.batch_clear"));
-        int row3Width = 120 * 2 + spacing;
-        int row3StartX = this.width / 2 - row3Width / 2;
-        this.startButton = new GuiButton(6, row3StartX, row3Y, 120, buttonHeight, I18n.format("gui.wikizoomer.batch_start"));
-        this.closeButton = new GuiButton(7, row3StartX + 120 + spacing, row3Y, 120, buttonHeight, I18n.format("gui.wikizoomer.close"));
+        int row2Y = row1Y + 22;
+        int row3Y = row2Y + 22;
+        int listTop = 32;
+        int listBottom = row1Y - 10;
+        this.modList = new ModListWidget(this.mc, this.width, this.height, listTop, listBottom, 20, this.entries);
+        int col1X = startX;
+        int col2X = startX + buttonWidth + spacing;
+        int col3X = startX + (buttonWidth + spacing) * 2;
+        this.itemsButton = new GuiButton(0, col1X, row1Y, buttonWidth, buttonHeight, "");
+        this.entitiesButton = new GuiButton(1, col2X, row1Y, buttonWidth, buttonHeight, "");
+        this.backgroundButton = new GuiButton(2, col3X, row1Y, buttonWidth, buttonHeight, "");
+        net.minecraft.client.gui.GuiSlider.FormatHelper formatHelper = new net.minecraft.client.gui.GuiSlider.FormatHelper() {
+            @Override
+            public String getText(int id, String name, float value) {
+                return name + ": " + (int)Math.round(value) + "%";
+            }
+        };
+        net.minecraft.client.gui.GuiSlider slider = new net.minecraft.client.gui.GuiSlider(sliderResponder, 8, col1X, row2Y, I18n.format("gui.wikizoomer.zoom"), 1, 300, zoomPercent, formatHelper);
+        slider.width = buttonWidth;
+        slider.height = buttonHeight;
+        this.addButton(slider);
+        this.resolutionButton = new GuiButton(3, col2X, row2Y, buttonWidth, buttonHeight, "");
+        this.selectAllButton = new GuiButton(4, col3X, row2Y, buttonWidth, buttonHeight, I18n.format("gui.wikizoomer.batch_select_all"));
+        this.clearButton = new GuiButton(5, col1X, row3Y, buttonWidth, buttonHeight, I18n.format("gui.wikizoomer.batch_clear"));
+        this.startButton = new GuiButton(6, col2X, row3Y, buttonWidth, buttonHeight, I18n.format("gui.wikizoomer.batch_start"));
+        this.closeButton = new GuiButton(7, col3X, row3Y, buttonWidth, buttonHeight, I18n.format("gui.wikizoomer.close"));
         this.buttonList.add(this.itemsButton);
         this.buttonList.add(this.entitiesButton);
         this.buttonList.add(this.backgroundButton);
@@ -149,7 +176,7 @@ public class GuiBatchExport extends GuiScreen {
             return;
         }
         List<ExportTask> tasks = new ArrayList<>();
-        float zoom = ExportManager.getDefaultZoom();
+        float zoom = zoomPercent;
         int exportSize = getExportSize();
         if (exportItems) {
             for (Item item : ForgeRegistries.ITEMS.getValuesCollection()) {
@@ -219,6 +246,10 @@ public class GuiBatchExport extends GuiScreen {
         if (this.mc.player != null) {
             this.mc.player.sendMessage(new TextComponentString(message));
         }
+    }
+
+    private void setZoomValue(int id, float value) {
+        zoomPercent = value;
     }
 
     private static int findDefaultExportSizeIndex() {
