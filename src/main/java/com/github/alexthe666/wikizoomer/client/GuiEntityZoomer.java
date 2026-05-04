@@ -29,9 +29,11 @@ import static net.minecraft.client.Minecraft.getMinecraft;
 public class GuiEntityZoomer extends GuiScreen {
     private final GuiPageButtonList.GuiResponder sliderResponder;
     private TileEntityEntityZoomer zoomerBase;
-    private boolean greenscreen = false;
+    private ExportTask.Background background = ExportTask.Background.GREENSCREEN;
     private float sliderValue = 100;
     private float prevSliderValue = sliderValue;
+    private int exportSizeIndex = findDefaultExportSizeIndex();
+    private static final int[] EXPORT_SIZES = ExportManager.getExportSizes();
 
     public GuiEntityZoomer(TileEntityEntityZoomer zoomerBase) {
         super();
@@ -66,9 +68,10 @@ public class GuiEntityZoomer extends GuiScreen {
         int i = (this.width) / 2;
         int j = (this.height - 166) / 2;
         String exit = I18n.format("gui.wikizoomer.close");
-        String greenscreen = I18n.format("gui.wikizoomer.greenscreen");
+        String backgroundLabel = I18n.format("gui.wikizoomer.background", getBackgroundLabel());
         String exportPng = I18n.format("gui.wikizoomer.export_png");
         String batchExport = I18n.format("gui.wikizoomer.batch_export");
+        String resolutionLabel = I18n.format("gui.wikizoomer.resolution", getExportSize(), getExportSize());
         int maxLength = 120;
         net.minecraft.client.gui.GuiSlider.FormatHelper formatHelper = new net.minecraft.client.gui.GuiSlider.FormatHelper() {
             @Override
@@ -82,10 +85,12 @@ public class GuiEntityZoomer extends GuiScreen {
         this.addButton(slider);
         int row1Y = j + 180;
         int row2Y = j + 202;
-        this.addButton(new GuiButton(1, i - maxLength / 2, row1Y, maxLength, 20, greenscreen));
+        int row3Y = j + 224;
+        this.addButton(new GuiButton(1, i - maxLength / 2, row1Y, maxLength, 20, backgroundLabel));
         this.addButton(new GuiButton(3, i - maxLength / 2 + 140, row1Y, maxLength, 20, exportPng));
-        this.addButton(new GuiButton(4, i - maxLength / 2, row2Y, maxLength, 20, batchExport));
-        this.addButton(new GuiButton(2, i - maxLength / 2 + 140, row2Y, maxLength, 20, exit));
+        this.addButton(new GuiButton(5, i - maxLength / 2, row2Y, maxLength, 20, resolutionLabel));
+        this.addButton(new GuiButton(4, i - maxLength / 2 + 140, row2Y, maxLength, 20, batchExport));
+        this.addButton(new GuiButton(2, i - maxLength / 2 + 70, row3Y, maxLength, 20, exit));
         for (GuiButton button : this.buttonList) {
             button.enabled = true;
         }
@@ -94,14 +99,14 @@ public class GuiEntityZoomer extends GuiScreen {
     @Override
     protected void actionPerformed(GuiButton button) {
         if (button.enabled && button.id == 1) {
-            greenscreen = !greenscreen;
+            background = background == ExportTask.Background.GREENSCREEN ? ExportTask.Background.TRANSPARENT : ExportTask.Background.GREENSCREEN;
         }
         if (button.enabled && button.id == 2) {
             Minecraft.getMinecraft().displayGuiScreen(null);
         }
         if (button.enabled && button.id == 3) {
             Entity entity = zoomerBase.getCachedEntity();
-            ExportTask task = ExportManager.createEntityTask(entity, sliderValue, greenscreen, false);
+            ExportTask task = ExportManager.createEntityTask(entity, sliderValue, background, getExportSize(), false);
             if (task == null) {
                 if (Minecraft.getMinecraft().player != null) {
                     Minecraft.getMinecraft().player.sendMessage(new TextComponentString(I18n.format("gui.wikizoomer.export_no_entity")));
@@ -113,6 +118,9 @@ public class GuiEntityZoomer extends GuiScreen {
         if (button.enabled && button.id == 4) {
             Minecraft.getMinecraft().displayGuiScreen(new GuiBatchExport());
         }
+        if (button.enabled && button.id == 5) {
+            exportSizeIndex = (exportSizeIndex + 1) % EXPORT_SIZES.length;
+        }
         initGui();
     }
 
@@ -120,7 +128,7 @@ public class GuiEntityZoomer extends GuiScreen {
     public void drawScreen(int mouseX, int mouseY, float partialTicks) {
         if (getMinecraft() != null) {
             try {
-                if (greenscreen) {
+                if (background == ExportTask.Background.GREENSCREEN) {
                     int integer = 0X4CFF00;
                     float brightness = 1.0F;
                     int alpha = 255;
@@ -189,5 +197,25 @@ public class GuiEntityZoomer extends GuiScreen {
 
     public boolean doesGuiPauseGame() {
         return false;
+    }
+
+    private static int findDefaultExportSizeIndex() {
+        int defaultSize = ExportManager.getDefaultExportSize();
+        for (int i = 0; i < EXPORT_SIZES.length; i++) {
+            if (EXPORT_SIZES[i] == defaultSize) {
+                return i;
+            }
+        }
+        return EXPORT_SIZES.length - 1;
+    }
+
+    private int getExportSize() {
+        return EXPORT_SIZES[exportSizeIndex];
+    }
+
+    private String getBackgroundLabel() {
+        return background == ExportTask.Background.GREENSCREEN
+                ? I18n.format("gui.wikizoomer.background.greenscreen")
+                : I18n.format("gui.wikizoomer.background.transparent");
     }
 }

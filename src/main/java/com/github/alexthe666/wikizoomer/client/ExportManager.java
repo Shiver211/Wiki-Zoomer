@@ -7,22 +7,24 @@ import net.minecraft.client.renderer.RenderHelper;
 import net.minecraft.client.renderer.entity.RenderManager;
 import net.minecraft.client.resources.I18n;
 import net.minecraft.client.shader.Framebuffer;
+import net.minecraft.client.renderer.texture.TextureUtil;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityList;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.ScreenShotHelper;
 import net.minecraft.util.text.TextComponentString;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.lwjgl.BufferUtils;
 import org.lwjgl.opengl.GL11;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.nio.IntBuffer;
 import java.util.ArrayDeque;
 import java.util.List;
 import java.util.Queue;
@@ -30,15 +32,26 @@ import java.util.Queue;
 @SideOnly(Side.CLIENT)
 public class ExportManager {
     private static final Logger LOGGER = LogManager.getLogger();
-    private static final int EXPORT_SIZE = 512;
+    private static final int DEFAULT_EXPORT_SIZE = 512;
+    private static final int[] EXPORT_SIZES = new int[]{64, 128, 256, 512};
     private static final float DEFAULT_ZOOM = 100F;
     private static final float ITEM_BASE_SCALE = 16F;
     private static final Queue<ExportTask> QUEUE = new ArrayDeque<>();
     private static Framebuffer framebuffer;
     private static int batchRemaining = 0;
+    private static IntBuffer pixelBuffer;
+    private static int[] pixelValues;
 
     public static float getDefaultZoom() {
         return DEFAULT_ZOOM;
+    }
+
+    public static int getDefaultExportSize() {
+        return DEFAULT_EXPORT_SIZE;
+    }
+
+    public static int[] getExportSizes() {
+        return EXPORT_SIZES.clone();
     }
 
     public static void enqueue(ExportTask task) {
@@ -56,7 +69,7 @@ public class ExportManager {
         sendChat(I18n.format("gui.wikizoomer.batch_started", tasks.size()));
     }
 
-    public static ExportTask createItemTask(ItemStack stack, float zoomPercent, boolean greenscreen, boolean isBatch) {
+    public static ExportTask createItemTask(ItemStack stack, float zoomPercent, ExportTask.Background background, int exportSize, boolean isBatch) {
         if (stack == null || stack.isEmpty()) {
             return null;
         }
@@ -65,10 +78,10 @@ public class ExportManager {
             return null;
         }
         File output = getOutputFile(id);
-        return ExportTask.forItem(stack, output, greenscreen, isBatch, zoomPercent);
+        return ExportTask.forItem(stack, output, background, isBatch, zoomPercent, exportSize);
     }
 
-    public static ExportTask createEntityTask(Entity entity, float zoomPercent, boolean greenscreen, boolean isBatch) {
+    public static ExportTask createEntityTask(Entity entity, float zoomPercent, ExportTask.Background background, int exportSize, boolean isBatch) {
         if (entity == null) {
             return null;
         }
@@ -77,15 +90,15 @@ public class ExportManager {
             return null;
         }
         File output = getOutputFile(id);
-        return ExportTask.forEntity(entity, output, greenscreen, isBatch, zoomPercent);
+        return ExportTask.forEntity(entity, output, background, isBatch, zoomPercent, exportSize);
     }
 
-    public static ExportTask createEntityIdTask(ResourceLocation entityId, float zoomPercent, boolean greenscreen, boolean isBatch) {
+    public static ExportTask createEntityIdTask(ResourceLocation entityId, float zoomPercent, ExportTask.Background background, int exportSize, boolean isBatch) {
         if (entityId == null) {
             return null;
         }
         File output = getOutputFile(entityId);
-        return ExportTask.forEntityId(entityId, output, greenscreen, isBatch, zoomPercent);
+        return ExportTask.forEntityId(entityId, output, background, isBatch, zoomPercent, exportSize);
     }
 
     public static void tick() {
@@ -130,7 +143,8 @@ public class ExportManager {
                 return false;
             }
         }
-        ensureFramebuffer();
+        int exportSize = task.exportSize;
+        ensureFramebuffer(exportSize);
         File output = task.outputFile;
         File parent = output.getParentFile();
         if (parent != null && !parent.exists() && !parent.mkdirs()) {
@@ -142,11 +156,11 @@ public class ExportManager {
         boolean pushedMatrices = false;
         try {
             framebuffer.bindFramebuffer(true);
-            GL11.glViewport(0, 0, EXPORT_SIZE, EXPORT_SIZE);
-            if (task.greenscreen) {
-                GlStateManager.clearColor(0.298F, 1.0F, 0.0F, 1.0F);
+            GL11.glViewport(0, 0, exportSize, exportSize);
+            if (task.background == ExportTask.Background.TRANSPARENT) {
+                GlStateManager.clearColor(0.0F, 0.0F, 0.0F, 0.0F);
             } else {
-                GlStateManager.clearColor(0.0F, 0.0F, 0.0F, 1.0F);
+                GlStateManager.clearColor(0.298F, 1.0F, 0.0F, 1.0F);
             }
             GlStateManager.clear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
             GlStateManager.disableCull();
@@ -154,7 +168,7 @@ public class ExportManager {
             GlStateManager.matrixMode(GL11.GL_PROJECTION);
             GlStateManager.pushMatrix();
             GlStateManager.loadIdentity();
-            GlStateManager.ortho(0.0D, EXPORT_SIZE, EXPORT_SIZE, 0.0D, 1000.0D, 3000.0D);
+            GlStateManager.ortho(0.0D, exportSize, exportSize, 0.0D, 1000.0D, 3000.0D);
             GlStateManager.matrixMode(GL11.GL_MODELVIEW);
             GlStateManager.pushMatrix();
             GlStateManager.loadIdentity();
@@ -162,11 +176,12 @@ public class ExportManager {
             pushedMatrices = true;
             GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
             if (task.type == ExportTask.Type.ITEM) {
-                renderItem(task.itemStack, task.zoomPercent);
+                renderItem(task.itemStack, task.zoomPercent, exportSize);
             } else {
-                renderEntity(mc, entity, task.zoomPercent);
+                renderEntity(mc, entity, task.zoomPercent, exportSize);
             }
-            BufferedImage image = ScreenShotHelper.createScreenshot(EXPORT_SIZE, EXPORT_SIZE, framebuffer);
+            boolean transparent = task.background == ExportTask.Background.TRANSPARENT;
+            BufferedImage image = readFramebuffer(exportSize, exportSize, framebuffer, transparent);
             ImageIO.write(image, "png", output);
             success = true;
         } catch (Exception e) {
@@ -185,9 +200,9 @@ public class ExportManager {
         return success;
     }
 
-    private static void ensureFramebuffer() {
-        if (framebuffer == null || framebuffer.framebufferTextureWidth != EXPORT_SIZE || framebuffer.framebufferTextureHeight != EXPORT_SIZE) {
-            framebuffer = new Framebuffer(EXPORT_SIZE, EXPORT_SIZE, true);
+    private static void ensureFramebuffer(int exportSize) {
+        if (framebuffer == null || framebuffer.framebufferTextureWidth != exportSize || framebuffer.framebufferTextureHeight != exportSize) {
+            framebuffer = new Framebuffer(exportSize, exportSize, true);
         }
     }
 
@@ -201,10 +216,10 @@ public class ExportManager {
         return EntityList.createEntityByIDFromName(task.entityId, mc.world);
     }
 
-    private static void renderItem(ItemStack stack, float zoomPercent) {
+    private static void renderItem(ItemStack stack, float zoomPercent, int exportSize) {
         float scale = ITEM_BASE_SCALE * (zoomPercent / 100F);
         GlStateManager.pushMatrix();
-        GlStateManager.translate(EXPORT_SIZE / 2F, EXPORT_SIZE / 2F, 500.0F);
+        GlStateManager.translate(exportSize / 2F, exportSize / 2F, 500.0F);
         GlStateManager.scale(scale, scale, scale);
         RenderHelper.enableGUIStandardItemLighting();
         Minecraft.getMinecraft().getRenderItem().renderItemAndEffectIntoGUI(stack, -8, -8);
@@ -212,7 +227,7 @@ public class ExportManager {
         GlStateManager.popMatrix();
     }
 
-    private static void renderEntity(Minecraft mc, Entity entity, float zoomPercent) {
+    private static void renderEntity(Minecraft mc, Entity entity, float zoomPercent, int exportSize) {
         entity.ticksExisted = 0;
         if (entity instanceof EntityLivingBase) {
             ((EntityLivingBase) entity).rotationYawHead = 0;
@@ -226,7 +241,9 @@ public class ExportManager {
         float scale = baseScale * sizeScale;
         GlStateManager.enableColorMaterial();
         GlStateManager.pushMatrix();
-        GlStateManager.translate(EXPORT_SIZE / 2F, EXPORT_SIZE * 0.75F, 150.0F + scale);
+        float centerX = exportSize / 2F;
+        float centerY = exportSize / 2F + (entity.height * scale) / 2F;
+        GlStateManager.translate(centerX, centerY, 150.0F + scale);
         GlStateManager.scale(-scale, scale, scale);
         GlStateManager.rotate(-30.0F, 1.0F, 0.0F, 0.0F);
         GlStateManager.rotate(135.0F, 0.0F, -1.0F, 0.0F);
@@ -250,5 +267,31 @@ public class ExportManager {
         if (mc.player != null) {
             mc.player.sendMessage(new TextComponentString(message));
         }
+    }
+
+    private static BufferedImage readFramebuffer(int width, int height, Framebuffer framebufferIn, boolean transparent) {
+        if (OpenGlHelper.isFramebufferEnabled()) {
+            width = framebufferIn.framebufferTextureWidth;
+            height = framebufferIn.framebufferTextureHeight;
+        }
+        int size = width * height;
+        if (pixelBuffer == null || pixelBuffer.capacity() < size) {
+            pixelBuffer = BufferUtils.createIntBuffer(size);
+            pixelValues = new int[size];
+        }
+        GlStateManager.glPixelStorei(3333, 1);
+        GlStateManager.glPixelStorei(3317, 1);
+        pixelBuffer.clear();
+        if (OpenGlHelper.isFramebufferEnabled()) {
+            GlStateManager.bindTexture(framebufferIn.framebufferTexture);
+            GlStateManager.glGetTexImage(3553, 0, 32993, 33639, pixelBuffer);
+        } else {
+            GlStateManager.glReadPixels(0, 0, width, height, 32993, 33639, pixelBuffer);
+        }
+        pixelBuffer.get(pixelValues);
+        TextureUtil.processPixelValues(pixelValues, width, height);
+        BufferedImage image = new BufferedImage(width, height, transparent ? BufferedImage.TYPE_INT_ARGB : BufferedImage.TYPE_INT_RGB);
+        image.setRGB(0, 0, width, height, pixelValues, 0, width);
+        return image;
     }
 }

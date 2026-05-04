@@ -31,10 +31,13 @@ public class GuiBatchExport extends GuiScreen {
     private List<ModEntry> entries = new ArrayList<>();
     private boolean exportItems = true;
     private boolean exportEntities = true;
-    private boolean greenscreen = true;
+    private ExportTask.Background background = ExportTask.Background.GREENSCREEN;
+    private int exportSizeIndex = findDefaultExportSizeIndex();
+    private static final int[] EXPORT_SIZES = ExportManager.getExportSizes();
     private GuiButton itemsButton;
     private GuiButton entitiesButton;
-    private GuiButton greenscreenButton;
+    private GuiButton backgroundButton;
+    private GuiButton resolutionButton;
     private GuiButton selectAllButton;
     private GuiButton clearButton;
     private GuiButton startButton;
@@ -45,7 +48,7 @@ public class GuiBatchExport extends GuiScreen {
         super.initGui();
         this.entries = buildEntries();
         int listTop = 32;
-        int listBottom = this.height - 90;
+        int listBottom = this.height - 110;
         this.modList = new ModListWidget(this.mc, this.width, this.height, listTop, listBottom, 20, this.entries);
         this.buttonList.clear();
         int buttonWidth = 100;
@@ -53,19 +56,23 @@ public class GuiBatchExport extends GuiScreen {
         int spacing = 10;
         int rowWidth = buttonWidth * 3 + spacing * 2;
         int startX = this.width / 2 - rowWidth / 2;
-        int row1Y = this.height - 80;
-        int row2Y = this.height - 55;
-        int row3Y = this.height - 30;
+        int row1Y = this.height - 90;
+        int row2Y = this.height - 65;
+        int row3Y = this.height - 40;
         this.itemsButton = new GuiButton(0, startX, row1Y, buttonWidth, buttonHeight, "");
         this.entitiesButton = new GuiButton(1, startX + buttonWidth + spacing, row1Y, buttonWidth, buttonHeight, "");
-        this.greenscreenButton = new GuiButton(2, startX + (buttonWidth + spacing) * 2, row1Y, buttonWidth, buttonHeight, "");
-        this.selectAllButton = new GuiButton(3, startX, row2Y, buttonWidth, buttonHeight, I18n.format("gui.wikizoomer.batch_select_all"));
-        this.clearButton = new GuiButton(4, startX + buttonWidth + spacing, row2Y, buttonWidth, buttonHeight, I18n.format("gui.wikizoomer.batch_clear"));
-        this.startButton = new GuiButton(5, startX + (buttonWidth + spacing) * 2, row2Y, buttonWidth, buttonHeight, I18n.format("gui.wikizoomer.batch_start"));
-        this.closeButton = new GuiButton(6, this.width / 2 - 60, row3Y, 120, buttonHeight, I18n.format("gui.wikizoomer.close"));
+        this.backgroundButton = new GuiButton(2, startX + (buttonWidth + spacing) * 2, row1Y, buttonWidth, buttonHeight, "");
+        this.resolutionButton = new GuiButton(3, startX, row2Y, buttonWidth, buttonHeight, "");
+        this.selectAllButton = new GuiButton(4, startX + buttonWidth + spacing, row2Y, buttonWidth, buttonHeight, I18n.format("gui.wikizoomer.batch_select_all"));
+        this.clearButton = new GuiButton(5, startX + (buttonWidth + spacing) * 2, row2Y, buttonWidth, buttonHeight, I18n.format("gui.wikizoomer.batch_clear"));
+        int row3Width = 120 * 2 + spacing;
+        int row3StartX = this.width / 2 - row3Width / 2;
+        this.startButton = new GuiButton(6, row3StartX, row3Y, 120, buttonHeight, I18n.format("gui.wikizoomer.batch_start"));
+        this.closeButton = new GuiButton(7, row3StartX + 120 + spacing, row3Y, 120, buttonHeight, I18n.format("gui.wikizoomer.close"));
         this.buttonList.add(this.itemsButton);
         this.buttonList.add(this.entitiesButton);
-        this.buttonList.add(this.greenscreenButton);
+        this.buttonList.add(this.backgroundButton);
+        this.buttonList.add(this.resolutionButton);
         this.buttonList.add(this.selectAllButton);
         this.buttonList.add(this.clearButton);
         this.buttonList.add(this.startButton);
@@ -82,15 +89,18 @@ public class GuiBatchExport extends GuiScreen {
             exportEntities = !exportEntities;
             updateButtonLabels();
         } else if (button.id == 2) {
-            greenscreen = !greenscreen;
+            background = background == ExportTask.Background.GREENSCREEN ? ExportTask.Background.TRANSPARENT : ExportTask.Background.GREENSCREEN;
             updateButtonLabels();
         } else if (button.id == 3) {
-            setAllSelected(true);
+            exportSizeIndex = (exportSizeIndex + 1) % EXPORT_SIZES.length;
+            updateButtonLabels();
         } else if (button.id == 4) {
-            setAllSelected(false);
+            setAllSelected(true);
         } else if (button.id == 5) {
-            startExport();
+            setAllSelected(false);
         } else if (button.id == 6) {
+            startExport();
+        } else if (button.id == 7) {
             Minecraft.getMinecraft().displayGuiScreen(null);
         }
     }
@@ -124,7 +134,8 @@ public class GuiBatchExport extends GuiScreen {
     private void updateButtonLabels() {
         this.itemsButton.displayString = I18n.format("gui.wikizoomer.batch_items", exportItems ? "ON" : "OFF");
         this.entitiesButton.displayString = I18n.format("gui.wikizoomer.batch_entities", exportEntities ? "ON" : "OFF");
-        this.greenscreenButton.displayString = I18n.format("gui.wikizoomer.batch_greenscreen", greenscreen ? "ON" : "OFF");
+        this.backgroundButton.displayString = I18n.format("gui.wikizoomer.background", getBackgroundLabel());
+        this.resolutionButton.displayString = I18n.format("gui.wikizoomer.resolution", getExportSize(), getExportSize());
     }
 
     private void startExport() {
@@ -139,6 +150,7 @@ public class GuiBatchExport extends GuiScreen {
         }
         List<ExportTask> tasks = new ArrayList<>();
         float zoom = ExportManager.getDefaultZoom();
+        int exportSize = getExportSize();
         if (exportItems) {
             for (Item item : ForgeRegistries.ITEMS.getValuesCollection()) {
                 if (item == Items.AIR) {
@@ -148,7 +160,7 @@ public class GuiBatchExport extends GuiScreen {
                 if (id == null || !modIds.contains(id.getNamespace())) {
                     continue;
                 }
-                ExportTask task = ExportManager.createItemTask(new ItemStack(item), zoom, greenscreen, true);
+                ExportTask task = ExportManager.createItemTask(new ItemStack(item), zoom, background, exportSize, true);
                 if (task != null) {
                     tasks.add(task);
                 }
@@ -163,7 +175,7 @@ public class GuiBatchExport extends GuiScreen {
                 if (entry.getEntityClass() == null || Modifier.isAbstract(entry.getEntityClass().getModifiers())) {
                     continue;
                 }
-                ExportTask task = ExportManager.createEntityIdTask(id, zoom, greenscreen, true);
+                ExportTask task = ExportManager.createEntityIdTask(id, zoom, background, exportSize, true);
                 if (task != null) {
                     tasks.add(task);
                 }
@@ -207,6 +219,26 @@ public class GuiBatchExport extends GuiScreen {
         if (this.mc.player != null) {
             this.mc.player.sendMessage(new TextComponentString(message));
         }
+    }
+
+    private static int findDefaultExportSizeIndex() {
+        int defaultSize = ExportManager.getDefaultExportSize();
+        for (int i = 0; i < EXPORT_SIZES.length; i++) {
+            if (EXPORT_SIZES[i] == defaultSize) {
+                return i;
+            }
+        }
+        return EXPORT_SIZES.length - 1;
+    }
+
+    private int getExportSize() {
+        return EXPORT_SIZES[exportSizeIndex];
+    }
+
+    private String getBackgroundLabel() {
+        return background == ExportTask.Background.GREENSCREEN
+                ? I18n.format("gui.wikizoomer.background.greenscreen")
+                : I18n.format("gui.wikizoomer.background.transparent");
     }
 
     @SideOnly(Side.CLIENT)
