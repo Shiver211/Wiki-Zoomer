@@ -71,25 +71,31 @@ public class GuiItemZoomer extends GuiScreen {
         String exportPng = I18n.format("gui.wikizoomer.export_png");
         String batchExport = I18n.format("gui.wikizoomer.batch_export");
         String resolutionLabel = I18n.format("gui.wikizoomer.resolution", getExportSize(), getExportSize());
-        int maxLength = 120;
+        int buttonWidth = 120;
+        int buttonHeight = 20;
+        int spacing = 20;
+        int rowWidth = buttonWidth * 3 + spacing * 2;
+        int startX = i - rowWidth / 2;
+        int col1X = startX;
+        int col2X = startX + buttonWidth + spacing;
+        int col3X = startX + (buttonWidth + spacing) * 2;
         net.minecraft.client.gui.GuiSlider.FormatHelper formatHelper = new net.minecraft.client.gui.GuiSlider.FormatHelper() {
             @Override
             public String getText(int id, String name, float value) {
                 return name + ": " + (int)Math.round(value) + "%";
             }
         };
-        net.minecraft.client.gui.GuiSlider slider = new net.minecraft.client.gui.GuiSlider(sliderResponder, 0, i - 120 / 2 - 140, j + 180, I18n.format("gui.wikizoomer.zoom"), 1, 300, sliderValue, formatHelper);
-        slider.width = 120;
-        slider.height = 20;
-        this.addButton(slider);
         int row1Y = j + 180;
-        int row2Y = j + 202;
-        int row3Y = j + 224;
-        this.addButton(new GuiButton(1, i - maxLength / 2, row1Y, maxLength, 20, backgroundLabel));
-        this.addButton(new GuiButton(3, i - maxLength / 2 + 140, row1Y, maxLength, 20, exportPng));
-        this.addButton(new GuiButton(5, i - maxLength / 2, row2Y, maxLength, 20, resolutionLabel));
-        this.addButton(new GuiButton(4, i - maxLength / 2 + 140, row2Y, maxLength, 20, batchExport));
-        this.addButton(new GuiButton(2, i - maxLength / 2, row3Y, maxLength, 20, exit));
+        int row2Y = row1Y + 22;
+        net.minecraft.client.gui.GuiSlider slider = new net.minecraft.client.gui.GuiSlider(sliderResponder, 0, col1X, row1Y, I18n.format("gui.wikizoomer.zoom"), 1, 300, sliderValue, formatHelper);
+        slider.width = buttonWidth;
+        slider.height = buttonHeight;
+        this.addButton(slider);
+        this.addButton(new GuiButton(1, col2X, row1Y, buttonWidth, buttonHeight, backgroundLabel));
+        this.addButton(new GuiButton(3, col3X, row1Y, buttonWidth, buttonHeight, exportPng));
+        this.addButton(new GuiButton(5, col1X, row2Y, buttonWidth, buttonHeight, resolutionLabel));
+        this.addButton(new GuiButton(4, col2X, row2Y, buttonWidth, buttonHeight, batchExport));
+        this.addButton(new GuiButton(2, col3X, row2Y, buttonWidth, buttonHeight, exit));
         for (GuiButton button : this.buttonList) {
             button.enabled = true;
         }

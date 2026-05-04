@@ -218,8 +218,15 @@ public class ExportManager {
 
     private static void renderItem(ItemStack stack, float zoomPercent, int exportSize) {
         float scale = ITEM_BASE_SCALE * (zoomPercent / 100F);
+        float zOffset = 500.0F - (100.0F * scale);
+        GlStateManager.enableTexture2D();
+        GlStateManager.enableAlpha();
+        GlStateManager.alphaFunc(516, 0.1F);
+        GlStateManager.enableBlend();
+        GlStateManager.tryBlendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA, GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO);
+        GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
         GlStateManager.pushMatrix();
-        GlStateManager.translate(exportSize / 2F, exportSize / 2F, 500.0F);
+        GlStateManager.translate(exportSize / 2F, exportSize / 2F, zOffset);
         GlStateManager.scale(scale, scale, scale);
         RenderHelper.enableGUIStandardItemLighting();
         Minecraft.getMinecraft().getRenderItem().renderItemAndEffectIntoGUI(stack, -8, -8);
