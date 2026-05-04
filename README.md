@@ -1,21 +1,58 @@
-## TemplateDevEnv
-_For Kotlin see [TemplateDevEnvKt](https://github.com/CleanroomMC/TemplateDevEnvKt)_
+# Wiki Zoomer Unofficial
 
-Template workspace for modding Minecraft 1.12.2. Licensed under MIT, it is made for public use.
+一个 Minecraft 1.12.2 模组，添加了用于拍摄物品、方块和实体等轴测截图的方块。非常适合 Wiki 编辑、整合包作者和需要清晰、一致渲染图的内容创作者。
 
-This template runs on **Java 25**, **Gradle 9.2.1** + **[RetroFuturaGradle](https://github.com/GTNewHorizons/RetroFuturaGradle) 2.0.2** + **Forge 14.23.5.2847**.
+## 功能
 
-With **coremod and mixin support** that is easy to configure.
+- **物品缩放器** - 以等轴测视角渲染任意物品或方块
+- **实体缩放器** - 以等轴测视角渲染任意实体
+- **实体信息** - 捕获实体数据以供实体缩放器使用
+- **绿幕模式** - 切换绿色背景，方便后期合成
+- **透明背景** - 导出透明背景的 PNG 文件
+- **批量导出** - 一键导出选定模组的全部物品/实体
+- **可调缩放** - 控制渲染缩放级别
+- **PNG 导出** - 将渲染图直接保存为 PNG 文件
 
-### Instructions:
+## 环境要求
 
-1. Click `use this template` at the top.
-2. Clone the repository that you have created with this template to your local machine.
-3. Make sure IDEA is using Java 25 for Gradle before you sync the project. Verify this by going to IDEA's `Settings > Build, Execution, Deployment > Build Tools > Gradle > Gradle JVM`.
-4. Open the project folder in IDEA. When prompted, click "Load Gradle Project" as it detects the `build.gradle`, if you weren't prompted, right-click the project's `build.gradle` in IDEA, select `Link Gradle Project`, after completion, hit `Refresh All` in the gradle tab on the right.
-5. Run gradle tasks such as `runClient` and `runServer` in the IDEA gradle tab, or use the auto-imported run configurations like `1. Run Client`.
+- Minecraft 1.12.2
+- Forge 14.23.5.2847
+- Java 8+
 
-### Notes:
-- Dependencies script in [gradle/scripts/dependencies.gradle](gradle/scripts/dependencies.gradle), explanations are commented in the file.
-- Publishing script in [gradle/scripts/publishing.gradle](gradle/scripts/publishing.gradle).
-- When writing Mixins on IntelliJ, it is advisable to use latest [MinecraftDev Fork for RetroFuturaGradle](https://github.com/eigenraven/MinecraftDev/releases).
+## 使用方法
+
+### 物品缩放器
+1. 放置一个**物品缩放器**方块
+2. 手持任意物品/方块右键设置
+3. Shift + 右键打开渲染界面
+4. 调整缩放、切换绿幕、导出 PNG
+
+### 实体缩放器
+1. 放置一个**实体缩放器**方块
+2. 手持**实体信息**右键点击实体进行绑定
+3. 手持绑定后的实体信息右键点击实体缩放器
+4. Shift + 右键打开渲染界面
+
+### 批量导出
+1. 打开任意缩放器界面
+2. 点击**批量导出**
+3. 选择模组和物品/实体类型
+4. 设置背景和分辨率
+5. 点击**开始导出**
+
+## 构建
+
+```bash
+git clone https://github.com/Greediest-Studio/Wiki-Zoomer.git
+cd Wiki-Zoomer
+./gradlew build
+```
+
+## 许可证
+
+MIT 许可证 - 详见 [LICENSE](LICENSE)。
+
+## 致谢
+
+- 原作者：Alexthe666
+- 基于 [RetroFuturaGradle](https://github.com/GTNewHorizons/RetroFuturaGradle) 构建
