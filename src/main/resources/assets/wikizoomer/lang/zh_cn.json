@@ -4,6 +4,8 @@
   "item.wikizoomer.data_copier": "实体追踪器",
   "item.wikizoomer.data_copier.desc": "右键点击实体以绑定",
   "item.wikizoomer.data_copier.desc2": "实体渲染将使用追踪的实体属性",
+  "item.wikizoomer.data_copier.success": "已追踪: %s",
+  "item.wikizoomer.data_copier.tracking": "当前追踪: %s",
   "gui.wikizoomer.close": "关闭",
   "gui.wikizoomer.greenscreen": "切换绿幕",
   "gui.wikizoomer.zoom": "缩放",

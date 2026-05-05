@@ -28,12 +28,16 @@ public class ItemDataCopier extends Item {
     public void appendHoverText(ItemStack stack, @Nullable Level worldIn, List<Component> tooltip, TooltipFlag flagIn) {
         tooltip.add(Component.translatable("item.wikizoomer.data_copier.desc").withStyle(ChatFormatting.GRAY));
         tooltip.add(Component.translatable("item.wikizoomer.data_copier.desc2").withStyle(ChatFormatting.GRAY));
+        if (ClientProxy.dataMimic != null) {
+            tooltip.add(Component.translatable("item.wikizoomer.data_copier.tracking", ClientProxy.dataMimic.getDisplayName()).withStyle(ChatFormatting.GREEN));
+        }
     }
 
     @Override
     public InteractionResult interactLivingEntity(ItemStack stack, Player player, LivingEntity entity, InteractionHand hand) {
         if(player.level().isClientSide){
             WikiZoomerMod.PROXY.onDataCopierUse(entity);
+            player.displayClientMessage(Component.translatable("item.wikizoomer.data_copier.success", entity.getDisplayName()), true);
         }
         return InteractionResult.SUCCESS;
     }

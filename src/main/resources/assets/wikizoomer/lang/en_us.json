@@ -4,6 +4,8 @@
   "item.wikizoomer.data_copier": "Entity Tracker",
   "item.wikizoomer.data_copier.desc": "Right click on entity to bind",
   "item.wikizoomer.data_copier.desc2": "Entity Renders will use tracked entity properties",
+  "item.wikizoomer.data_copier.success": "Now tracking: %s",
+  "item.wikizoomer.data_copier.tracking": "Currently tracking: %s",
   "gui.wikizoomer.close": "Close",
   "gui.wikizoomer.greenscreen": "Toggle Greenscreen",
   "gui.wikizoomer.zoom": "Zoom",

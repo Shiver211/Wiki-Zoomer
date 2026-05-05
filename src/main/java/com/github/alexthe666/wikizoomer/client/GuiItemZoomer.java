@@ -14,6 +14,7 @@ import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
+import java.util.Objects;
 import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.api.distmarker.Dist;
@@ -25,8 +26,7 @@ import java.awt.*;
 @OnlyIn(Dist.CLIENT)
 public class GuiItemZoomer extends Screen {
 
-    // Use the namespace + path constructor to avoid the deprecated single-string ResourceLocation
-    public static final ResourceLocation GREENSCREEN = new ResourceLocation("wikizoomer", "textures/gui/greenscreen.png");
+    public static final ResourceLocation GREENSCREEN = Objects.requireNonNull(ResourceLocation.tryParse("wikizoomer:textures/gui/greenscreen.png"), "wikizoomer:textures/gui/greenscreen.png");
     private final TileEntityZoomerBase zoomerBase;
     private ExportTask.Background background = ExportTask.Background.GREENSCREEN;
     private float sliderValue = 100;

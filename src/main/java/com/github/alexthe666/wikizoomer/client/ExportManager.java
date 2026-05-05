@@ -255,15 +255,21 @@ public class ExportManager {
     }
 
     private static void renderItemCentered(PoseStack poseStack, MultiBufferSource.BufferSource bufferSource, ItemStack stack, int exportSize, float zoomPercent) {
-        float baseScale = (exportSize / 512.0F) * 12.0F;
-        float scale = baseScale * (zoomPercent / 100.0F);
+        float scale = exportSize * (zoomPercent / 100.0F);
         poseStack.pushPose();
         poseStack.translate(exportSize / 2.0F, exportSize / 2.0F, 100.0F);
-        poseStack.scale(scale, scale, scale);
+        poseStack.scale(scale, -scale, scale);
 
         Minecraft mc = Minecraft.getInstance();
         BakedModel model = mc.getItemRenderer().getModel(stack, mc.level, null, 0);
-        mc.getItemRenderer().render(stack, ItemDisplayContext.FIXED, false, poseStack, bufferSource, 15728880, OverlayTexture.NO_OVERLAY, model);
+        
+        if (!model.usesBlockLight()) {
+            Lighting.setupForFlatItems();
+        } else {
+            Lighting.setupFor3DItems();
+        }
+
+        mc.getItemRenderer().render(stack, ItemDisplayContext.GUI, false, poseStack, bufferSource, 15728880, OverlayTexture.NO_OVERLAY, model);
 
         poseStack.popPose();
     }
@@ -272,8 +278,10 @@ public class ExportManager {
         int centerX = exportSize / 2;
         int centerY = (exportSize + (int) ((zoomPercent / 100.0F) * (entity.getBbHeight() * 100.0F))) / 2;
         Entity renderEntity = entity;
+        boolean isMimic = false;
         if (ClientProxy.dataMimic != null && renderEntity.getType() == ClientProxy.dataMimic.getType()) {
             renderEntity = ClientProxy.dataMimic;
+            isMimic = true;
         }
         final Entity finalRenderEntity = renderEntity;
 
@@ -281,6 +289,8 @@ public class ExportManager {
         poseStack.translate(centerX, centerY, 10.0F);
         poseStack.scale(zoomPercent, zoomPercent, zoomPercent);
         poseStack.mulPose(Axis.ZP.rotationDegrees(180.0F));
+        poseStack.mulPose(Axis.XP.rotationDegrees(30.0F));
+        poseStack.mulPose(Axis.YP.rotationDegrees(45.0F));
 
         Minecraft mc = Minecraft.getInstance();
         EntityRenderDispatcher entityRenderDispatcher = mc.getEntityRenderDispatcher();
@@ -289,14 +299,16 @@ public class ExportManager {
         entityRenderDispatcher.overrideCameraOrientation(cameraOrientation);
         entityRenderDispatcher.setRenderShadow(false);
 
-        if (finalRenderEntity instanceof LivingEntity livingEntity) {
-            livingEntity.yBodyRot = 0.0F;
-            livingEntity.yHeadRotO = 0.0F;
-            livingEntity.yHeadRot = 0.0F;
+        if (!isMimic) {
+            if (finalRenderEntity instanceof LivingEntity livingEntity) {
+                livingEntity.yBodyRot = 0.0F;
+                livingEntity.yHeadRotO = 0.0F;
+                livingEntity.yHeadRot = 0.0F;
+            }
+            finalRenderEntity.setYRot(0.0F);
+            finalRenderEntity.setXRot(0.0F);
+            finalRenderEntity.setOldPosAndRot();
         }
-        finalRenderEntity.setYRot(0.0F);
-        finalRenderEntity.setXRot(0.0F);
-        finalRenderEntity.setOldPosAndRot();
 
         Vector3f light0 = new Vector3f(-0.2F, 0.0F, 1.0F);
         light0.normalize();

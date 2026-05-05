@@ -139,21 +139,23 @@ public class GuiEntityZoomer extends Screen {
             int i = (this.width) / 2;
             int j = (this.height + (int)((scale / 100F) * (renderEntity.getBbHeight() * 100F))) / 2;
 
+            boolean isMimic = false;
             if(ClientProxy.dataMimic != null){
                 if(renderEntity.getType() == ClientProxy.dataMimic.getType()){
                     renderEntity = ClientProxy.dataMimic;
+                    isMimic = true;
                 }
             }
             if(renderEntity instanceof LivingEntity){
                 guiGraphics.pose().translate(i, j, 10F);
-                drawEntityOnScreen(guiGraphics, 100, 0, scale2,  false, -30, 135, 180, 0, 0, (LivingEntity)renderEntity);
+                drawEntityOnScreen(guiGraphics, 100, 0, scale2,  false, -30, 135, 180, 0, 0, (LivingEntity)renderEntity, isMimic);
             }
         }
         guiGraphics.pose().popPose();
         prevSliderValue = sliderValue;
     }
 
-    public static void drawEntityOnScreen(GuiGraphics guiGraphics, int posX, int posY, float scale, boolean follow, double xRot, double yRot, double zRot, float mouseX, float mouseY, Entity entity) {
+    public static void drawEntityOnScreen(GuiGraphics guiGraphics, int posX, int posY, float scale, boolean follow, double xRot, double yRot, double zRot, float mouseX, float mouseY, Entity entity, boolean isMimic) {
         guiGraphics.pose().pushPose();
         float f = (float) Math.atan(-mouseX / 40.0F);
         float f1 = (float) Math.atan(mouseY / 40.0F);
@@ -180,14 +182,16 @@ public class GuiEntityZoomer extends Screen {
         entityrenderdispatcher.overrideCameraOrientation(quaternion1);
         entityrenderdispatcher.setRenderShadow(false);
         MultiBufferSource.BufferSource multibuffersource$buffersource = Minecraft.getInstance().renderBuffers().bufferSource();
-        entity.setYRot(0.0F);
-        entity.setXRot(0.0F);
-        if (entity instanceof LivingEntity) {
-            ((LivingEntity) entity).yBodyRot = 0.0F;
-            ((LivingEntity) entity).yHeadRotO = 0.0F;
-            ((LivingEntity) entity).yHeadRot = 0.0F;
+        if (!isMimic) {
+            entity.setYRot(0.0F);
+            entity.setXRot(0.0F);
+            if (entity instanceof LivingEntity) {
+                ((LivingEntity) entity).yBodyRot = 0.0F;
+                ((LivingEntity) entity).yHeadRotO = 0.0F;
+                ((LivingEntity) entity).yHeadRot = 0.0F;
+            }
+            entity.setOldPosAndRot();
         }
-        entity.setOldPosAndRot();
         RenderSystem.runAsFancy(() -> {
             entityrenderdispatcher.render( entity, 0.0D, 0.0D, 0.0D, 0.0F, partialTicksForRender, guiGraphics.pose(), multibuffersource$buffersource, 15728880);
         });

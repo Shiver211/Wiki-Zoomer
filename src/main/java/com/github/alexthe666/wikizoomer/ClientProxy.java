@@ -31,9 +31,7 @@ public class ClientProxy extends CommonProxy{
     public void setup() {
         BlockEntityRenderers.register(TileEntityRegistry.ITEM_ZOOMER_TE.get(), RenderItemZoomer::new);
         BlockEntityRenderers.register(TileEntityRegistry.ENTITY_ZOOMER_TE.get(), RenderEntityZoomer::new);
-        ItemProperties.register(ItemAndBlockRegistry.ENTITY_BINDER_ITEM.get(), new ResourceLocation("bound"), (stack, a, b, c) -> {
-            return ItemEntityBinder.isEntityBound(stack) ? 1 : 0;
-        });
+        ItemProperties.register(ItemAndBlockRegistry.ENTITY_BINDER_ITEM.get(), java.util.Objects.requireNonNull(ResourceLocation.tryParse("bound"), "bound"), (stack, a, b, c) -> ItemEntityBinder.isEntityBound(stack) ? 1 : 0);
     }
 
     @Override
@@ -56,6 +54,11 @@ public class ClientProxy extends CommonProxy{
         if (event.phase == TickEvent.Phase.END) {
             ExportManager.tick();
         }
+    }
+
+    @SubscribeEvent
+    public void onClientLogout(net.minecraftforge.client.event.ClientPlayerNetworkEvent.LoggingOut event) {
+        dataMimic = null;
     }
 
 }

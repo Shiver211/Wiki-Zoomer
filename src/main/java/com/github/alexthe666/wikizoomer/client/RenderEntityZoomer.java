@@ -33,9 +33,11 @@ public class RenderEntityZoomer implements BlockEntityRenderer<TileEntityEntityZ
         matrixStackIn.translate(0D, 0.1F + Math.sin(rrr * 0.05F) * 0.1F, 0D);
         matrixStackIn.scale(0.5F, 0.5F, 0.5F);
         if(renderEntity != null){
+            boolean isMimic = false;
             if(ClientProxy.dataMimic != null){
                 if(renderEntity.getType() == ClientProxy.dataMimic.getType()){
                     renderEntity = ClientProxy.dataMimic;
+                    isMimic = true;
                 }
             }
             float f = 0.75F;
@@ -46,12 +48,14 @@ public class RenderEntityZoomer implements BlockEntityRenderer<TileEntityEntityZ
             matrixStackIn.translate(0.0D, 0.4000000059604645D, 0.0D);
             matrixStackIn.translate(0.0D, -0.20000000298023224D, 0.0D);
             matrixStackIn.scale(f, f, f);
-            renderEntity.setYRot(0.0F);
-            renderEntity.setXRot(0.0F);
-            if (renderEntity instanceof LivingEntity) {
-                ((LivingEntity) renderEntity).yBodyRot = 0.0F;
-                ((LivingEntity) renderEntity).yHeadRotO = 0.0F;
-                ((LivingEntity) renderEntity).yHeadRot = 0.0F;
+            if (!isMimic) {
+                renderEntity.setYRot(0.0F);
+                renderEntity.setXRot(0.0F);
+                if (renderEntity instanceof LivingEntity) {
+                    ((LivingEntity) renderEntity).yBodyRot = 0.0F;
+                    ((LivingEntity) renderEntity).yHeadRotO = 0.0F;
+                    ((LivingEntity) renderEntity).yHeadRot = 0.0F;
+                }
             }
             Minecraft.getInstance().getEntityRenderDispatcher().render(renderEntity, 0.0D, 0.0D, 0.0D, 0.0F, partialTicks, matrixStackIn, bufferIn, combinedLightIn);
 
