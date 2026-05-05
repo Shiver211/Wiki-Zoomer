@@ -40,17 +40,9 @@
 4. 设置背景和分辨率
 5. 点击**开始导出**
 
-## 构建
-
-```bash
-git clone https://github.com/Greediest-Studio/Wiki-Zoomer.git
-cd Wiki-Zoomer
-./gradlew build
-```
-
 ## 许可证
 
-MIT 许可证 - 详见 [LICENSE](LICENSE)。
+GNU General Public License v3.0 - 详见 [LICENSE](LICENSE)。
 
 ## 致谢
 
