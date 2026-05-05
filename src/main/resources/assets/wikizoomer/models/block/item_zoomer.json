@@ -1,10 +1,11 @@
 {
 	"parent": "block/block",
+	"render_type": "cutout",
 	"textures": {
-		"0": "wikizoomer:blocks/item_zoomer_side",
-		"1": "wikizoomer:blocks/item_zoomer_top",
-		"2": "minecraft:blocks/stone_slab_top",
-		"particle": "wikizoomer:blocks/item_zoomer_side"
+		"0": "wikizoomer:block/item_zoomer_side",
+		"1": "wikizoomer:block/item_zoomer_top",
+		"2": "minecraft:block/smooth_stone",
+		"particle": "wikizoomer:block/item_zoomer_side"
 	},
 	"elements": [
 		{

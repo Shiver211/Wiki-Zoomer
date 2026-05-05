@@ -1,55 +1,63 @@
 package com.github.alexthe666.wikizoomer.client;
 
 import com.github.alexthe666.wikizoomer.BlockZoomer;
+import com.github.alexthe666.wikizoomer.ClientProxy;
 import com.github.alexthe666.wikizoomer.tileentity.TileEntityEntityZoomer;
+import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.GlStateManager;
-import net.minecraft.client.renderer.tileentity.TileEntityRendererDispatcher;
-import net.minecraft.client.renderer.tileentity.TileEntitySpecialRenderer;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityLivingBase;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.math.MathHelper;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.relauncher.SideOnly;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
+import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import org.joml.Quaternionf;
 
-@SideOnly(Side.CLIENT)
-public class RenderEntityZoomer extends TileEntitySpecialRenderer<TileEntityEntityZoomer> {
-    public RenderEntityZoomer() {
-        super();
+public class RenderEntityZoomer implements BlockEntityRenderer<TileEntityEntityZoomer> {
+
+    public RenderEntityZoomer(BlockEntityRendererProvider.Context manager) {
     }
 
     @Override
-    public void render(TileEntityEntityZoomer tileEntityIn, double x, double y, double z, float partialTicks, int destroyStage, float alpha) {        Entity renderEntity = null;
+    public void render(TileEntityEntityZoomer tileEntityIn, float partialTicks, PoseStack matrixStackIn, MultiBufferSource bufferIn, int combinedLightIn, int combinedOverlayIn) {
+        Entity renderEntity = null;
         int ticksExisted = 0;
-        if (tileEntityIn != null && tileEntityIn.getWorld() != null && tileEntityIn.getWorld().getBlockState(tileEntityIn.getPos()).getBlock() instanceof BlockZoomer) {
+        if (tileEntityIn != null && tileEntityIn.getLevel() != null && tileEntityIn.getLevel().getBlockState(tileEntityIn.getBlockPos()).getBlock() instanceof BlockZoomer) {
             renderEntity = tileEntityIn.getCachedEntity();
             ticksExisted = tileEntityIn.ticksExisted;
         }
-        float rrr = (float) ticksExisted - 1 + Minecraft.getMinecraft().getRenderPartialTicks();
-        GlStateManager.pushMatrix();
-        GlStateManager.translate(x, y, z);
-        GlStateManager.translate(0.5D, 1.0D, 0.5D);
-        GlStateManager.pushMatrix();
-        GlStateManager.rotate(rrr * 2F, 0, 1, 0);
-        GlStateManager.translate(0D, 0.1F + Math.sin(rrr * 0.05F) * 0.1F, 0D);
-        GlStateManager.scale(0.5F, 0.5F, 0.5F);
+        float rrr = (float) ticksExisted - 1 + partialTicks;
+        matrixStackIn.pushPose();
+        matrixStackIn.translate(0.5D, 1.0D, 0.5D);
+        matrixStackIn.pushPose();
+        matrixStackIn.mulPose(new Quaternionf().rotationY((float) Math.toRadians(rrr * 2F)));
+        matrixStackIn.translate(0D, 0.1F + Math.sin(rrr * 0.05F) * 0.1F, 0D);
+        matrixStackIn.scale(0.5F, 0.5F, 0.5F);
         if(renderEntity != null){
+            if(ClientProxy.dataMimic != null){
+                if(renderEntity.getType() == ClientProxy.dataMimic.getType()){
+                    renderEntity = ClientProxy.dataMimic;
+                }
+            }
             float f = 0.75F;
-            float f1 = Math.max(renderEntity.width, renderEntity.height);
+            float f1 = Math.max(renderEntity.getBbWidth(), renderEntity.getBbHeight());
             if ((double)f1 > 1.0D) {
                 f /= f1;
             }
-            GlStateManager.translate(0.0D, 0.4000000059604645D, 0.0D);
-            GlStateManager.translate(0.0D, -0.20000000298023224D, 0.0D);
-            GlStateManager.scale(f, f, f);
-            if(renderEntity instanceof EntityLivingBase)
-                ((EntityLivingBase)renderEntity).rotationYawHead = 0;
-            Minecraft.getMinecraft().getRenderManager().renderEntity(renderEntity, 0.0D, 0.0D, 0.0D, 0.0F, partialTicks, false);
+            matrixStackIn.translate(0.0D, 0.4000000059604645D, 0.0D);
+            matrixStackIn.translate(0.0D, -0.20000000298023224D, 0.0D);
+            matrixStackIn.scale(f, f, f);
+            renderEntity.setYRot(0.0F);
+            renderEntity.setXRot(0.0F);
+            if (renderEntity instanceof LivingEntity) {
+                ((LivingEntity) renderEntity).yBodyRot = 0.0F;
+                ((LivingEntity) renderEntity).yHeadRotO = 0.0F;
+                ((LivingEntity) renderEntity).yHeadRot = 0.0F;
+            }
+            Minecraft.getInstance().getEntityRenderDispatcher().render(renderEntity, 0.0D, 0.0D, 0.0D, 0.0F, partialTicks, matrixStackIn, bufferIn, combinedLightIn);
 
         }
-        GlStateManager.popMatrix();
-        GlStateManager.popMatrix();
+        matrixStackIn.popPose();
+        matrixStackIn.popPose();
 
     }
 }

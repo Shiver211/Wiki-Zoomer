@@ -1,68 +1,51 @@
 package com.github.alexthe666.wikizoomer;
 
-import com.github.alexthe666.wikizoomer.client.ExportManager;
 import com.github.alexthe666.wikizoomer.client.GuiEntityZoomer;
 import com.github.alexthe666.wikizoomer.client.GuiItemZoomer;
 import com.github.alexthe666.wikizoomer.client.RenderEntityZoomer;
 import com.github.alexthe666.wikizoomer.client.RenderItemZoomer;
 import com.github.alexthe666.wikizoomer.tileentity.TileEntityEntityZoomer;
-import com.github.alexthe666.wikizoomer.tileentity.TileEntityItemZoomer;
+import com.github.alexthe666.wikizoomer.tileentity.TileEntityRegistry;
 import com.github.alexthe666.wikizoomer.tileentity.TileEntityZoomerBase;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.block.model.ModelBakery;
-import net.minecraft.client.renderer.block.model.ModelResourceLocation;
-import net.minecraft.item.Item;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.ResourceLocation;
-import net.minecraftforge.client.event.ModelRegistryEvent;
-import net.minecraftforge.client.model.ModelLoader;
-import net.minecraftforge.fml.client.registry.ClientRegistry;
+import net.minecraft.client.renderer.ItemBlockRenderTypes;
+import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.blockentity.BlockEntityRenderers;
+import net.minecraft.client.renderer.item.ItemProperties;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
-import net.minecraftforge.fml.common.gameevent.TickEvent;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.relauncher.SideOnly;
 
-@SideOnly(Side.CLIENT)
-@Mod.EventBusSubscriber
-public class ClientProxy extends CommonProxy {
+@OnlyIn(Dist.CLIENT)
+@Mod.EventBusSubscriber(bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+public class ClientProxy extends CommonProxy{
+    public static Entity dataMimic = null;
 
     @Override
     public void setup() {
-        super.setup();
-          ClientRegistry.bindTileEntitySpecialRenderer(TileEntityItemZoomer.class, new RenderItemZoomer());
-        ClientRegistry.bindTileEntitySpecialRenderer(TileEntityEntityZoomer.class, new RenderEntityZoomer());
+        BlockEntityRenderers.register(TileEntityRegistry.ITEM_ZOOMER_TE.get(), RenderItemZoomer::new);
+        BlockEntityRenderers.register(TileEntityRegistry.ENTITY_ZOOMER_TE.get(), RenderEntityZoomer::new);
+        ItemProperties.register(ItemAndBlockRegistry.ENTITY_BINDER_ITEM.get(), new ResourceLocation("bound"), (stack, a, b, c) -> {
+            return ItemEntityBinder.isEntityBound(stack) ? 1 : 0;
+        });
     }
-
-    @SubscribeEvent
-    @SideOnly(Side.CLIENT)
-    public static void registerModels(ModelRegistryEvent event) {
-        ModelBakery.registerItemVariants(WikiZoomerMod.ENTITY_BINDER_ITEM, new ResourceLocation("wikizoomer:entity_binder"), new ResourceLocation("wikizoomer:entity_binder_bound"));
-        ModelLoader.setCustomModelResourceLocation(WikiZoomerMod.ENTITY_BINDER_ITEM, 0, new ModelResourceLocation("wikizoomer:entity_binder", "inventory"));
-        ModelLoader.setCustomModelResourceLocation(Item.getItemFromBlock(WikiZoomerMod.ITEM_ZOOMER_BLOCK), 0, new ModelResourceLocation("wikizoomer:item_zoomer_item", "inventory"));
-        ModelLoader.setCustomModelResourceLocation(Item.getItemFromBlock(WikiZoomerMod.ENTITY_ZOOMER_BLOCK), 0, new ModelResourceLocation("wikizoomer:entity_zoomer_item", "inventory"));
-    }
-
-        @Override
-    public void onBlockRegister() {
-        super.onBlockRegister();
- }
 
     @Override
     public void openItemZoomerGui(TileEntityZoomerBase tileEntity) {
-        Minecraft.getMinecraft().displayGuiScreen(new GuiItemZoomer(tileEntity));
+        Minecraft.getInstance().setScreen(new GuiItemZoomer(tileEntity));
     }
 
     @Override
     public void openEntityZoomerGui(TileEntityEntityZoomer tileEntity) {
-        Minecraft.getMinecraft().displayGuiScreen(new GuiEntityZoomer(tileEntity));
+        Minecraft.getInstance().setScreen(new GuiEntityZoomer(tileEntity));
     }
 
-    @SubscribeEvent
-    @SideOnly(Side.CLIENT)
-    public void onClientTick(TickEvent.ClientTickEvent event) {
-        if (event.phase == TickEvent.Phase.END) {
-            ExportManager.tick();
-        }
+    @Override
+    public void onDataCopierUse(LivingEntity target) {
+        this.dataMimic = target;
     }
+
 }

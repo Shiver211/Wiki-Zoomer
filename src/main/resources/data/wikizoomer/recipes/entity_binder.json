@@ -5,8 +5,7 @@
       "item": "minecraft:paper"
     },
     {
-      "type": "forge:ore_dict",
-      "ore": "dyePurple"
+      "tag": "forge:dyes/purple"
     },
     {
       "item": "minecraft:bone"

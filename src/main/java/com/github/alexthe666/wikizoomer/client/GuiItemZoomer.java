@@ -1,197 +1,145 @@
 package com.github.alexthe666.wikizoomer.client;
 
 import com.github.alexthe666.wikizoomer.tileentity.TileEntityZoomerBase;
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.*;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiButton;
-import net.minecraft.client.gui.GuiPageButtonList;
-import net.minecraft.client.gui.GuiScreen;
-import net.minecraft.client.renderer.GlStateManager;
-import net.minecraft.client.renderer.RenderHelper;
-import net.minecraft.client.resources.I18n;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.EnumFacing;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.text.TextComponentString;
-import net.minecraftforge.fml.client.config.GuiSlider;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.relauncher.SideOnly;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.renderer.GameRenderer;
+import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.client.resources.model.BakedModel;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.ItemDisplayContext;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.api.distmarker.OnlyIn;
+import net.minecraftforge.client.gui.widget.ForgeSlider;
 
-import java.util.List;
+import java.awt.*;
 
-import com.github.alexthe666.wikizoomer.client.ExportManager;
-import com.github.alexthe666.wikizoomer.client.ExportTask;
-import com.github.alexthe666.wikizoomer.client.GuiBatchExport;
+@OnlyIn(Dist.CLIENT)
+public class GuiItemZoomer extends Screen {
 
-@SideOnly(Side.CLIENT)
-public class GuiItemZoomer extends GuiScreen {
-
-    private final GuiPageButtonList.GuiResponder sliderResponder;
-    private TileEntityZoomerBase zoomerBase;
-    private ExportTask.Background background = ExportTask.Background.GREENSCREEN;
+    public static final ResourceLocation GREENSCREEN = new ResourceLocation("wikizoomer:textures/gui/greenscreen.png");
+    private final TileEntityZoomerBase zoomerBase;
+    private boolean greenscreen = false;
     private float sliderValue = 100;
     private float prevSliderValue = sliderValue;
-    private int exportSizeIndex = findDefaultExportSizeIndex();
-    private static final int[] EXPORT_SIZES = ExportManager.getExportSizes();
+    private boolean screenshot = false;
+    private Button screenshotButton;
 
     public GuiItemZoomer(TileEntityZoomerBase zoomerBase) {
-        super();
+        super(Component.translatable("item_zoomer"));
         this.zoomerBase = zoomerBase;
-        sliderResponder = new GuiPageButtonList.GuiResponder() {
-            @Override
-            public void setEntryValue(int id, boolean value) {
-
-            }
-
-            @Override
-            public void setEntryValue(int id, float value) {
-                GuiItemZoomer.this.setSliderValue(id, value);
-            }
-
-            @Override
-            public void setEntryValue(int id, String value) {
-
-            }
-        };
-        initGui();
+        this.init();
     }
 
     private void setSliderValue(int i, float sliderValue) {
-        this.sliderValue = sliderValue;
+        this.sliderValue = Math.round(Mth.clamp(sliderValue, 1, 300F));
         prevSliderValue = this.sliderValue;
     }
 
-    public void initGui() {
-        super.initGui();
-        this.buttonList.clear();
+    public void init() {
+        super.init();
+        this.clearWidgets();
         int i = (this.width) / 2;
         int j = (this.height - 166) / 2;
-        String exit = I18n.format("gui.wikizoomer.close");
-        String backgroundLabel = I18n.format("gui.wikizoomer.background", getBackgroundLabel());
-        String exportPng = I18n.format("gui.wikizoomer.export_png");
-        String batchExport = I18n.format("gui.wikizoomer.batch_export");
-        String resolutionLabel = I18n.format("gui.wikizoomer.resolution", getExportSize(), getExportSize());
-        int buttonWidth = 120;
-        int buttonHeight = 20;
-        int spacing = 20;
-        int rowWidth = buttonWidth * 3 + spacing * 2;
-        int startX = i - rowWidth / 2;
-        int col1X = startX;
-        int col2X = startX + buttonWidth + spacing;
-        int col3X = startX + (buttonWidth + spacing) * 2;
-        net.minecraft.client.gui.GuiSlider.FormatHelper formatHelper = new net.minecraft.client.gui.GuiSlider.FormatHelper() {
+        MutableComponent exit = Component.translatable("gui.wikizoomer.close");
+        MutableComponent greenscreen = Component.translatable("gui.wikizoomer.greenscreen");
+        MutableComponent export = Component.translatable("gui.wikizoomer.export_png");
+        int maxLength = 120;
+        this.addRenderableWidget(new ForgeSlider(i - 120 / 2 - 140, j + 180, 120, 20, Component.translatable("gui.wikizoomer.zoom"), Component.literal("%"), 1, 300, 100, 1, 1, true) {
             @Override
-            public String getText(int id, String name, float value) {
-                return name + ": " + (int)Math.round(value) + "%";
+            protected void applyValue() {
+                GuiItemZoomer.this.setSliderValue(2, (float)getValue());
             }
-        };
-        int row1Y = j + 180;
-        int row2Y = row1Y + 22;
-        net.minecraft.client.gui.GuiSlider slider = new net.minecraft.client.gui.GuiSlider(sliderResponder, 0, col1X, row1Y, I18n.format("gui.wikizoomer.zoom"), 1, 300, sliderValue, formatHelper);
-        slider.width = buttonWidth;
-        slider.height = buttonHeight;
-        this.addButton(slider);
-        this.addButton(new GuiButton(1, col2X, row1Y, buttonWidth, buttonHeight, backgroundLabel));
-        this.addButton(new GuiButton(3, col3X, row1Y, buttonWidth, buttonHeight, exportPng));
-        this.addButton(new GuiButton(5, col1X, row2Y, buttonWidth, buttonHeight, resolutionLabel));
-        this.addButton(new GuiButton(4, col2X, row2Y, buttonWidth, buttonHeight, batchExport));
-        this.addButton(new GuiButton(2, col3X, row2Y, buttonWidth, buttonHeight, exit));
-        for (GuiButton button : this.buttonList) {
-            button.enabled = true;
-        }
+        });
+
+        this.addRenderableWidget(Button.builder(greenscreen, (button) -> {
+            GuiItemZoomer.this.greenscreen = !GuiItemZoomer.this.greenscreen;
+        }).size(maxLength, 20).pos(i - maxLength / 2, j + 180).build());
+        this.addRenderableWidget(Button.builder(exit, (button) -> {
+            Minecraft.getInstance().setScreen(null);
+        }).size(maxLength, 20).pos(i - maxLength / 2 + 140, j + 180).build());
+        this.addRenderableWidget(screenshotButton = Button.builder(export, (button) -> {
+            screenshot = true;
+        }).size(maxLength, 20).pos(i - maxLength / 2 + 140, j + 160).build());
+    }
+
+    public void renderGreenscreen(int z) {
+        Tesselator tesselator = Tesselator.getInstance();
+        BufferBuilder bufferbuilder = tesselator.getBuilder();
+        RenderSystem.setShader(GameRenderer::getPositionTexColorShader);
+        RenderSystem.setShaderTexture(0, GREENSCREEN);
+        RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
+        float f = 32.0F;
+        bufferbuilder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
+        bufferbuilder.vertex(0.0D, this.height, 0.0D).uv(0.0F, (float) this.height / 32.0F + (float) z).color(255, 255, 255, 255).endVertex();
+        bufferbuilder.vertex(this.width, this.height, 0.0D).uv((float) this.width / 32.0F, (float) this.height / 32.0F + (float) z).color(255, 255, 255, 255).endVertex();
+        bufferbuilder.vertex(this.width, 0.0D, 0.0D).uv((float) this.width / 32.0F, (float) z).color(255, 255, 255, 255).endVertex();
+        bufferbuilder.vertex(0.0D, 0.0D, 0.0D).uv(0.0F, (float) z).color(255, 255, 255, 255).endVertex();
+        tesselator.end();
     }
 
     @Override
-    protected void actionPerformed(GuiButton button) {
-        if (button.enabled && button.id == 1) {
-            background = background == ExportTask.Background.GREENSCREEN ? ExportTask.Background.TRANSPARENT : ExportTask.Background.GREENSCREEN;
-        }
-        if (button.enabled && button.id == 2) {
-            Minecraft.getMinecraft().displayGuiScreen(null);
-        }
-        if (button.enabled && button.id == 3) {
-            ExportTask task = ExportManager.createItemTask(zoomerBase.getStackInSlot(0), sliderValue, background, getExportSize(), false);
-            if (task == null) {
-                if (Minecraft.getMinecraft().player != null) {
-                    Minecraft.getMinecraft().player.sendMessage(new TextComponentString(I18n.format("gui.wikizoomer.export_no_item")));
-                }
-            } else {
-                ExportManager.enqueue(task);
+    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
+        if(screenshot){
+            screenshot = false;
+            ItemStack itemStack = zoomerBase.getItem(0);
+            String name = itemStack.isEmpty() || itemStack == null ? "none" : itemStack.getItem().toString();
+            ScreenshotHelper.exportScreenshot(name, () -> {
+                renderFocus(guiGraphics);
+            });
+            if(screenshotButton != null){
+                screenshotButton.setFocused(false);
             }
         }
-        if (button.enabled && button.id == 4) {
-            Minecraft.getMinecraft().displayGuiScreen(new GuiBatchExport());
-        }
-        if (button.enabled && button.id == 5) {
-            exportSizeIndex = (exportSizeIndex + 1) % EXPORT_SIZES.length;
-        }
-        initGui();
-    }
-
-
-
-    @Override
-    public void drawScreen(int mouseX, int mouseY, float partialTicks) {
-        if (Minecraft.getMinecraft() != null) {
+        if (getMinecraft() != null) {
             try {
-                if (background == ExportTask.Background.GREENSCREEN) {
-                    int integer = 0X4CFF00;
-                    float brightness = 1.0F;
-                    int alpha = 255;
-                    float f = (float) (integer >> 16 & 255) / 255.0F;
-                    float f1 = (float) (integer >> 8 & 255) / 255.0F;
-                    float f2 = (float) (integer & 255) / 255.0F;
-                    drawRect(0, 0, this.width, this.height, MathHelper.rgb(f * brightness, f1 * brightness, f2 * brightness) | alpha << 24);
+                if (greenscreen) {
+                    renderGreenscreen(10);
                 } else {
-                    this.drawDefaultBackground();
+                    this.renderBackground(guiGraphics);
                 }
             } catch (Exception e) {
 
             }
-        }
-        super.drawScreen(mouseX, mouseY, partialTicks);
-        int i = (this.width - 248) / 2 + 10;
-        int j = (this.height - 166) / 2 + 8;
-        GlStateManager.pushMatrix();
-        GlStateManager.translate(0, 0, 10F);
-        GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
-        ItemStack stack = zoomerBase.getStackInSlot(0);
-        GlStateManager.translate(i, j, 10F);
-        float scale = sliderValue/100F * 12F;
-        if (!stack.isEmpty()) {
-            GlStateManager.translate(113.5F - sliderValue, 76 - sliderValue,  Math.min(1000 -sliderValue * 20, 50));
-            GlStateManager.scale(scale, scale, scale);
-            GlStateManager.enableLighting();
-            RenderHelper.enableGUIStandardItemLighting();
-            Minecraft.getMinecraft().getRenderItem().renderItemAndEffectIntoGUI(stack, 0, 0);
-            RenderHelper.disableStandardItemLighting();
-            GlStateManager.disableLighting();
-        }
-        GlStateManager.popMatrix();
-    }
-
-
-    public boolean doesGuiPauseGame() {
-        return false;
-    }
-
-    private static int findDefaultExportSizeIndex() {
-        int defaultSize = ExportManager.getDefaultExportSize();
-        for (int i = 0; i < EXPORT_SIZES.length; i++) {
-            if (EXPORT_SIZES[i] == defaultSize) {
-                return i;
+            super.render(guiGraphics, mouseX, mouseY, partialTicks);
+            renderFocus(guiGraphics);
+            int i = (this.width - 248) / 2 + 10;
+            int j = (this.height - 166) / 2 + 8;
+            if(mouseX > (i - sliderValue) && mouseX < (i + sliderValue) && mouseY > (j - sliderValue) && mouseY < (j + sliderValue)){
+                ItemStack itemStack = zoomerBase.getItem(0);
+                guiGraphics.renderTooltip(font, itemStack, -500, -500);
             }
         }
-        return EXPORT_SIZES.length - 1;
+
     }
 
-    private int getExportSize() {
-        return EXPORT_SIZES[exportSizeIndex];
+    private void renderFocus(GuiGraphics guiGraphics) {
+        int i = (this.width - 248) / 2 + 10;
+        int j = (this.height - 166) / 2 + 8;
+        ItemStack itemStack = zoomerBase.getItem(0);
+        float scale1 = (sliderValue / 100F);
+        float scale = scale1 * 12F;
+        if (!itemStack.isEmpty()) {
+            guiGraphics.pose().pushPose();
+            guiGraphics.pose().translate(i, j, 10F);
+            guiGraphics.pose().translate(113.5F - scale1 * 100, 76 - scale1 * 100, 1000F - sliderValue * 20);
+            guiGraphics.pose().scale(scale, scale, scale);
+            guiGraphics.renderItem(Minecraft.getInstance().player, itemStack, 0, 0, 1);
+            guiGraphics.pose().popPose();
+        }
     }
 
-    private String getBackgroundLabel() {
-        return background == ExportTask.Background.GREENSCREEN
-                ? I18n.format("gui.wikizoomer.background.greenscreen")
-                : I18n.format("gui.wikizoomer.background.transparent");
+    public boolean isPauseScreen() {
+        return false;
     }
 }

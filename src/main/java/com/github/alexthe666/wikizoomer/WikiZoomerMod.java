@@ -1,69 +1,46 @@
 package com.github.alexthe666.wikizoomer;
 
-import com.github.alexthe666.wikizoomer.tileentity.TileEntityEntityZoomer;
-import com.github.alexthe666.wikizoomer.tileentity.TileEntityItemZoomer;
-import net.minecraft.block.Block;
-import net.minecraft.creativetab.CreativeTabs;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemBlock;
-import net.minecraft.item.ItemStack;
+import com.github.alexthe666.wikizoomer.tileentity.TileEntityRegistry;
+import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.event.RegistryEvent;
+import net.minecraftforge.event.BuildCreativeModeTabContentsEvent;
+import net.minecraftforge.eventbus.api.IEventBus;
+import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.common.SidedProxy;
-import net.minecraftforge.fml.common.event.FMLInitializationEvent;
-import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
-import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
+import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-@Mod(modid = "wikizoomer", name = "Wiki Zoomer",  version = "1.0.0")
-@Mod.EventBusSubscriber
+@Mod("wikizoomer")
+@Mod.EventBusSubscriber(modid = "wikizoomer")
 public class WikiZoomerMod {
-    private static final Logger LOGGER = LogManager.getLogger();
-    @SidedProxy(clientSide = "com.github.alexthe666.wikizoomer.ClientProxy", serverSide = "com.github.alexthe666.wikizoomer.CommonProxy")
-    public static CommonProxy PROXY;
+    public static final Logger LOGGER = LogManager.getLogger();
+    public static CommonProxy PROXY = DistExecutor.runForDist(() -> ClientProxy::new, () -> CommonProxy::new);
 
-    public static final CreativeTabs TAB = new CreativeTabs("wikizoomer") {
-        @Override
-        public ItemStack createIcon() {
-            return new ItemStack(ITEM_ZOOMER_BLOCK);
-        }
-    };
-
-    public static final Item ENTITY_BINDER_ITEM = new ItemEntityBinder();
-    public static final Block ITEM_ZOOMER_BLOCK = new BlockZoomer(true);
-    public static final Block ENTITY_ZOOMER_BLOCK = new BlockZoomer(false);
-
-    @Mod.EventHandler
-    public void preInit(FMLPreInitializationEvent event) {
-        PROXY.setup();
+    public WikiZoomerMod() {
+        final IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
+        modEventBus.addListener(this::setup);
+        modEventBus.addListener(this::registerTabItems);
         MinecraftForge.EVENT_BUS.register(this);
-    }
-
-    @Mod.EventHandler
-    public void init(FMLInitializationEvent event) {
         MinecraftForge.EVENT_BUS.register(PROXY);
-        PROXY.postSetup();
-        MinecraftForge.EVENT_BUS.register(this);
+        ItemAndBlockRegistry.ITEMS.register(modEventBus);
+        ItemAndBlockRegistry.BLOCKS.register(modEventBus);
+        TileEntityRegistry.TILE_ENTITIES.register(modEventBus);
     }
 
-    @SubscribeEvent
-    public static void registerBlocks(RegistryEvent.Register<Block> event) {
-        event.getRegistry().registerAll(ITEM_ZOOMER_BLOCK);
-        event.getRegistry().registerAll(ENTITY_ZOOMER_BLOCK);
+    private void setup(final FMLCommonSetupEvent event) {
+        PROXY.setup();
     }
 
-    @SubscribeEvent
-    public static void registerItems(RegistryEvent.Register<Item> event) {
-        event.getRegistry().register(ENTITY_BINDER_ITEM);
-        event.getRegistry().register(new ItemBlock(ITEM_ZOOMER_BLOCK)
-                .setRegistryName(ITEM_ZOOMER_BLOCK.getRegistryName())
-                .setTranslationKey("wikizoomer.item_zoomer"));
-        event.getRegistry().register(new ItemBlock(ENTITY_ZOOMER_BLOCK)
-                .setRegistryName(ENTITY_ZOOMER_BLOCK.getRegistryName())
-                .setTranslationKey("wikizoomer.entity_zoomer"));
-        PROXY.onBlockRegister();
+    private void registerTabItems(final BuildCreativeModeTabContentsEvent event) {
+        if(event.getTabKey() == CreativeModeTabs.FUNCTIONAL_BLOCKS){
+            event.accept(ItemAndBlockRegistry.ITEM_ZOOMER_BLOCK_ITEM.get());
+            event.accept(ItemAndBlockRegistry.ENTITY_ZOOMER_BLOCK_ITEM.get());
+        }
+        if(event.getTabKey() == CreativeModeTabs.TOOLS_AND_UTILITIES) {
+            event.accept(ItemAndBlockRegistry.ENTITY_BINDER_ITEM.get());
+            event.accept(ItemAndBlockRegistry.DATA_COPIER.get());
+        }
     }
-
 }

@@ -1,7 +1,7 @@
 {
   "parent": "item/generated",
   "textures": {
-    "layer0": "wikizoomer:items/entity_binder"
+    "layer0": "wikizoomer:item/entity_binder"
   },
   "overrides": [
     {
@@ -10,5 +10,5 @@
       },
       "model": "wikizoomer:item/entity_binder_bound"
     }
-  ]
+    ]
 }

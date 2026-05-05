@@ -2,122 +2,123 @@ package com.github.alexthe666.wikizoomer;
 
 import com.github.alexthe666.wikizoomer.tileentity.TileEntityEntityZoomer;
 import com.github.alexthe666.wikizoomer.tileentity.TileEntityItemZoomer;
+import com.github.alexthe666.wikizoomer.tileentity.TileEntityRegistry;
 import com.github.alexthe666.wikizoomer.tileentity.TileEntityZoomerBase;
-import net.minecraft.block.*;
-import net.minecraft.block.material.Material;
-import net.minecraft.block.state.IBlockState;
-import net.minecraft.client.resources.I18n;
-import net.minecraft.client.util.ITooltipFlag;
-import net.minecraft.creativetab.CreativeTabs;
-import net.minecraft.entity.item.EntityItem;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.inventory.InventoryHelper;
-import net.minecraft.item.ItemStack;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.EnumBlockRenderType;
-import net.minecraft.util.EnumFacing;
-import net.minecraft.util.EnumHand;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.TextFormatting;
-import net.minecraft.world.World;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.relauncher.SideOnly;
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.Containers;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.BaseEntityBlock;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.RenderShape;
+import net.minecraft.world.level.block.SoundType;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityTicker;
+import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.NoteBlockInstrument;
+import net.minecraft.world.level.material.MapColor;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.shapes.BooleanOp;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.world.phys.shapes.VoxelShape;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.api.distmarker.OnlyIn;
 
 import javax.annotation.Nullable;
 import java.util.List;
 
-public class BlockZoomer extends BlockContainer {
+public class BlockZoomer extends BaseEntityBlock {
+    private static final VoxelShape BASE_SHAPE = Block.box(0, 0, 0, 16, 5, 16);
+    private static final VoxelShape NECK_SHAPE = Block.box(4, 5, 4, 12, 16, 12);
+    private static final VoxelShape JOINED_SHAPE = Shapes.join(BASE_SHAPE, NECK_SHAPE, BooleanOp.OR);
     private boolean itemOrEntity = false;
 
     public BlockZoomer(boolean itemOrEntity) {
-        super(Material.ROCK);
-        this.setHarvestLevel("pickaxe", 1);
-        this.setSoundType(SoundType.METAL);
-        this.setHardness(5F);
-        this.setResistance(20F);
-        this.setCreativeTab(WikiZoomerMod.TAB);
-        this.setTickRandomly(true);
-        this.setRegistryName("wikizoomer", (itemOrEntity ? "item_zoomer" : "entity_zoomer"));
-        this.setTranslationKey("wikizoomer." + (itemOrEntity ? "item_zoomer" : "entity_zoomer"));
+        super(Properties.of().mapColor(MapColor.STONE).sound(SoundType.METAL).strength(5, 20F).randomTicks());
         this.itemOrEntity = itemOrEntity;
     }
 
-    public void breakBlock(World worldIn, BlockPos pos, IBlockState state) {
-        TileEntity tileentity = worldIn.getTileEntity(pos);
+    public void onRemove(BlockState state, Level worldIn, BlockPos pos, BlockState newState, boolean isMoving) {
+        BlockEntity tileentity = worldIn.getBlockEntity(pos);
         if (tileentity instanceof TileEntityZoomerBase) {
-            InventoryHelper.dropInventoryItems(worldIn, pos, (TileEntityZoomerBase) tileentity);
-            worldIn.updateComparatorOutputLevel(pos, this);
+            Containers.dropContents(worldIn, pos, (TileEntityZoomerBase) tileentity);
+            worldIn.updateNeighbourForOutputSignal(pos, this);
         }
+        super.onRemove(state, worldIn, pos, newState, isMoving);
     }
 
-
-    public EnumBlockRenderType getRenderType(IBlockState state) {
-        return EnumBlockRenderType.MODEL;
+    public RenderShape getRenderShape(BlockState p_149645_1_) {
+        return RenderShape.MODEL;
     }
 
-    public boolean onBlockActivated(World worldIn, BlockPos pos, IBlockState state, EntityPlayer playerIn, EnumHand handIn, EnumFacing facing, float hitX, float hitY, float hitZ) {
-        if (!playerIn.isSneaking()) {
-            if (worldIn.getTileEntity(pos) instanceof TileEntityZoomerBase) {
-                TileEntityZoomerBase zoomer = (TileEntityZoomerBase) worldIn.getTileEntity(pos);
-                if (!zoomer.getStackInSlot(0).isEmpty()) {
-                    EntityItem dropped = new EntityItem(worldIn, pos.getX() + 0.5D, pos.getY() + 1.0D, pos.getZ() + 0.5D, zoomer.getStackInSlot(0).copy());
-                    zoomer.clear();
-                    if(!worldIn.isRemote){
-                        worldIn.spawnEntity(dropped);
-                    }
+    public VoxelShape getShape(BlockState state, BlockGetter worldIn, BlockPos pos, CollisionContext context) {
+        return JOINED_SHAPE;
+    }
+
+    public InteractionResult use(BlockState state, Level worldIn, BlockPos pos, Player player, InteractionHand handIn, BlockHitResult hit) {
+        if (!player.isShiftKeyDown()) {
+            if (worldIn.getBlockEntity(pos) instanceof TileEntityZoomerBase) {
+                TileEntityZoomerBase zoomer = (TileEntityZoomerBase) worldIn.getBlockEntity(pos);
+                if (!zoomer.getItem(0).isEmpty()) {
+                    ItemEntity dropped = new ItemEntity(worldIn, pos.getX() + 0.5D, pos.getY() + 1.0D, pos.getZ() + 0.5D, zoomer.getItem(0).copy());
+                    worldIn.addFreshEntity(dropped);
+                    zoomer.clearContent();
                 }
-                ItemStack heldItem = playerIn.getHeldItem(handIn);
+                ItemStack heldItem = player.getItemInHand(handIn);
                 ItemStack single = heldItem.copy();
                 single.setCount(1);
-                if (itemOrEntity || single.getItem() == WikiZoomerMod.ENTITY_BINDER_ITEM) {
-                    zoomer.setInventorySlotContents(0, single);
-                    if (!playerIn.isCreative())
+                if (itemOrEntity || single.getItem() == ItemAndBlockRegistry.ENTITY_BINDER_ITEM.get()) {
+                    zoomer.setItem(0, single);
+                    if (!player.isCreative())
                         heldItem.shrink(1);
                 }
-                return true;
+                return InteractionResult.SUCCESS;
             }
         } else {
             if(itemOrEntity){
-                if (worldIn.isRemote) {
-                    WikiZoomerMod.PROXY.openItemZoomerGui((TileEntityZoomerBase) worldIn.getTileEntity(pos));
+                if (worldIn.isClientSide) {
+                    WikiZoomerMod.PROXY.openItemZoomerGui((TileEntityZoomerBase) worldIn.getBlockEntity(pos));
                 }
             }else{
-                if (worldIn.isRemote) {
-                    WikiZoomerMod.PROXY.openEntityZoomerGui((TileEntityEntityZoomer) worldIn.getTileEntity(pos));
+                if (worldIn.isClientSide) {
+                    WikiZoomerMod.PROXY.openEntityZoomerGui((TileEntityEntityZoomer) worldIn.getBlockEntity(pos));
                 }
             }
-            return true;
+            return InteractionResult.SUCCESS;
         }
-        return true;
+        return InteractionResult.SUCCESS;
+    }
+
+    @OnlyIn(Dist.CLIENT)
+    public void appendHoverText(ItemStack stack, @Nullable BlockGetter world, List<Component> tooltip, TooltipFlag flags) {
+        if(itemOrEntity){
+            tooltip.add(Component.translatable( "block.wikizoomer.item_zoomer.desc0").withStyle(ChatFormatting.GRAY));
+            tooltip.add(Component.translatable("block.wikizoomer.item_zoomer.desc1").withStyle(ChatFormatting.GRAY));
+        }else{
+            tooltip.add(Component.translatable("block.wikizoomer.entity_zoomer.desc0").withStyle(ChatFormatting.GRAY));
+            tooltip.add(Component.translatable("block.wikizoomer.entity_zoomer.desc1").withStyle(ChatFormatting.GRAY));
+        }
+
+    }
+
+    @org.jetbrains.annotations.Nullable
+    @Override
+    public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
+        return itemOrEntity ? new TileEntityItemZoomer(pos, state) : new TileEntityEntityZoomer(pos, state);
     }
 
     @Nullable
-    @Override
-    public TileEntity createNewTileEntity(World world, int meta) {
-        return itemOrEntity ? new TileEntityItemZoomer() : new TileEntityEntityZoomer();
-    }
-
-    @Deprecated
-    public boolean isOpaqueCube(IBlockState state) {
-        return false;
-    }
-
-    @Deprecated
-    public boolean isFullCube(IBlockState state)
-    {
-        return false;
-    }
-
-    @SideOnly(Side.CLIENT)
-    public void addInformation(ItemStack stack, @Nullable World worldIn, List<String> tooltip, ITooltipFlag flagIn) {
-        if(itemOrEntity){
-            tooltip.add(I18n.format("tile.wikizoomer.item_zoomer.desc0"));
-            tooltip.add(I18n.format("tile.wikizoomer.item_zoomer.desc1"));
-        }else{
-            tooltip.add(I18n.format("tile.wikizoomer.entity_zoomer.desc0"));
-            tooltip.add(I18n.format("tile.wikizoomer.entity_zoomer.desc1"));
-        }
-
+    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level p_152180_, BlockState p_152181_, BlockEntityType<T> p_152182_) {
+        return itemOrEntity ? createTickerHelper(p_152182_, TileEntityRegistry.ITEM_ZOOMER_TE.get(), TileEntityItemZoomer::tick) : createTickerHelper(p_152182_, TileEntityRegistry.ENTITY_ZOOMER_TE.get(), TileEntityEntityZoomer::tick);
     }
 }
