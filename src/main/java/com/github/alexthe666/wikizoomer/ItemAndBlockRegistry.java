@@ -1,6 +1,7 @@
 package com.github.alexthe666.wikizoomer;
 
 import net.minecraft.network.chat.Component;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
@@ -15,7 +16,7 @@ import net.minecraftforge.registries.RegistryObject;
 public class ItemAndBlockRegistry {
     public static final DeferredRegister<Item> ITEMS = DeferredRegister.create(ForgeRegistries.ITEMS, "wikizoomer");
     public static final DeferredRegister<Block> BLOCKS = DeferredRegister.create(ForgeRegistries.BLOCKS, "wikizoomer");
-    public static final DeferredRegister<CreativeModeTab> TABS = DeferredRegister.create(ForgeRegistries.CREATIVE_MODE_TABS, "wikizoomer");
+    public static final DeferredRegister<CreativeModeTab> TABS = DeferredRegister.create(Registries.CREATIVE_MODE_TAB, "wikizoomer");
 
     public static final RegistryObject<Item> ENTITY_BINDER_ITEM = ITEMS.register("entity_binder", () -> new ItemEntityBinder());
     public static final RegistryObject<Item> DATA_COPIER = ITEMS.register("data_copier", () -> new ItemDataCopier());

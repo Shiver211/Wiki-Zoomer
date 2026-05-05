@@ -1,6 +1,5 @@
 package com.github.alexthe666.wikizoomer.client;
 
-import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -16,7 +15,7 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.client.gui.widget.ForgeSlider;
 import net.minecraftforge.fml.ModList;
-import net.minecraftforge.fml.ModContainer;
+import net.minecraftforge.forgespi.language.IModInfo;
 import net.minecraftforge.registries.ForgeRegistries;
 
 import java.util.ArrayList;
@@ -179,11 +178,11 @@ public class GuiBatchExport extends Screen {
     }
 
     private List<ModEntry> buildEntries() {
-        List<ModContainer> mods = new ArrayList<>(ModList.get().getMods());
-        mods.sort(Comparator.comparing(ModContainer::getModId));
+        List<IModInfo> mods = new ArrayList<>(ModList.get().getMods());
+        mods.sort(Comparator.comparing(IModInfo::getModId));
         List<ModEntry> list = new ArrayList<>();
-        for (ModContainer mod : mods) {
-            list.add(new ModEntry(mod.getModId(), mod.getModInfo().getDisplayName()));
+        for (IModInfo mod : mods) {
+            list.add(new ModEntry(mod.getModId(), mod.getDisplayName()));
         }
         return list;
     }
