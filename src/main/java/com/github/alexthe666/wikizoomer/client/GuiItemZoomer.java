@@ -1,6 +1,9 @@
 package com.github.alexthe666.wikizoomer.client;
 
 import com.github.alexthe666.wikizoomer.tileentity.TileEntityZoomerBase;
+import com.github.alexthe666.wikizoomer.client.ExportManager;
+import com.github.alexthe666.wikizoomer.client.ExportTask;
+import com.github.alexthe666.wikizoomer.client.GuiBatchExport;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
 import net.minecraft.client.Minecraft;
@@ -8,16 +11,11 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.GameRenderer;
-import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.client.gui.widget.ForgeSlider;
@@ -29,11 +27,11 @@ public class GuiItemZoomer extends Screen {
 
     public static final ResourceLocation GREENSCREEN = new ResourceLocation("wikizoomer:textures/gui/greenscreen.png");
     private final TileEntityZoomerBase zoomerBase;
-    private boolean greenscreen = false;
+    private ExportTask.Background background = ExportTask.Background.GREENSCREEN;
     private float sliderValue = 100;
     private float prevSliderValue = sliderValue;
-    private boolean screenshot = false;
-    private Button screenshotButton;
+    private int exportSizeIndex = findDefaultExportSizeIndex();
+    private static final int[] EXPORT_SIZES = ExportManager.getExportSizes();
 
     public GuiItemZoomer(TileEntityZoomerBase zoomerBase) {
         super(Component.translatable("item_zoomer"));
@@ -52,59 +50,64 @@ public class GuiItemZoomer extends Screen {
         int i = (this.width) / 2;
         int j = (this.height - 166) / 2;
         MutableComponent exit = Component.translatable("gui.wikizoomer.close");
-        MutableComponent greenscreen = Component.translatable("gui.wikizoomer.greenscreen");
+        MutableComponent backgroundLabel = Component.translatable("gui.wikizoomer.background", getBackgroundLabel());
         MutableComponent export = Component.translatable("gui.wikizoomer.export_png");
-        int maxLength = 120;
-        this.addRenderableWidget(new ForgeSlider(i - 120 / 2 - 140, j + 180, 120, 20, Component.translatable("gui.wikizoomer.zoom"), Component.literal("%"), 1, 300, 100, 1, 1, true) {
+        MutableComponent batchExport = Component.translatable("gui.wikizoomer.batch_export");
+        MutableComponent resolutionLabel = Component.translatable("gui.wikizoomer.resolution", getExportSize(), getExportSize());
+        int buttonWidth = 120;
+        int buttonHeight = 20;
+        int spacing = 20;
+        int rowWidth = buttonWidth * 3 + spacing * 2;
+        int startX = i - rowWidth / 2;
+        int col1X = startX;
+        int col2X = startX + buttonWidth + spacing;
+        int col3X = startX + (buttonWidth + spacing) * 2;
+        int row1Y = j + 180;
+        int row2Y = row1Y + 22;
+        this.addRenderableWidget(new ForgeSlider(col1X, row1Y, buttonWidth, buttonHeight, Component.translatable("gui.wikizoomer.zoom"), Component.literal("%"), 1, 300, sliderValue, 1, 1, true) {
             @Override
             protected void applyValue() {
                 GuiItemZoomer.this.setSliderValue(2, (float)getValue());
             }
         });
-
-        this.addRenderableWidget(Button.builder(greenscreen, (button) -> {
-            GuiItemZoomer.this.greenscreen = !GuiItemZoomer.this.greenscreen;
-        }).size(maxLength, 20).pos(i - maxLength / 2, j + 180).build());
+        this.addRenderableWidget(Button.builder(backgroundLabel, (button) -> {
+            GuiItemZoomer.this.background = GuiItemZoomer.this.background == ExportTask.Background.GREENSCREEN
+                    ? ExportTask.Background.TRANSPARENT
+                    : ExportTask.Background.GREENSCREEN;
+            init();
+        }).size(buttonWidth, buttonHeight).pos(col2X, row1Y).build());
+        this.addRenderableWidget(Button.builder(export, (button) -> {
+            ExportTask task = ExportManager.createItemTask(zoomerBase.getItem(0), sliderValue, background, getExportSize(), false);
+            if (task == null) {
+                if (Minecraft.getInstance().player != null) {
+                    Minecraft.getInstance().player.sendSystemMessage(Component.translatable("gui.wikizoomer.export_no_item"));
+                }
+            } else {
+                ExportManager.enqueue(task);
+            }
+        }).size(buttonWidth, buttonHeight).pos(col3X, row1Y).build());
+        this.addRenderableWidget(Button.builder(resolutionLabel, (button) -> {
+            exportSizeIndex = (exportSizeIndex + 1) % EXPORT_SIZES.length;
+            init();
+        }).size(buttonWidth, buttonHeight).pos(col1X, row2Y).build());
+        this.addRenderableWidget(Button.builder(batchExport, (button) -> {
+            Minecraft.getInstance().setScreen(new GuiBatchExport());
+        }).size(buttonWidth, buttonHeight).pos(col2X, row2Y).build());
         this.addRenderableWidget(Button.builder(exit, (button) -> {
             Minecraft.getInstance().setScreen(null);
-        }).size(maxLength, 20).pos(i - maxLength / 2 + 140, j + 180).build());
-        this.addRenderableWidget(screenshotButton = Button.builder(export, (button) -> {
-            screenshot = true;
-        }).size(maxLength, 20).pos(i - maxLength / 2 + 140, j + 160).build());
+        }).size(buttonWidth, buttonHeight).pos(col3X, row2Y).build());
     }
 
-    public void renderGreenscreen(int z) {
-        Tesselator tesselator = Tesselator.getInstance();
-        BufferBuilder bufferbuilder = tesselator.getBuilder();
-        RenderSystem.setShader(GameRenderer::getPositionTexColorShader);
-        RenderSystem.setShaderTexture(0, GREENSCREEN);
-        RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
-        float f = 32.0F;
-        bufferbuilder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
-        bufferbuilder.vertex(0.0D, this.height, 0.0D).uv(0.0F, (float) this.height / 32.0F + (float) z).color(255, 255, 255, 255).endVertex();
-        bufferbuilder.vertex(this.width, this.height, 0.0D).uv((float) this.width / 32.0F, (float) this.height / 32.0F + (float) z).color(255, 255, 255, 255).endVertex();
-        bufferbuilder.vertex(this.width, 0.0D, 0.0D).uv((float) this.width / 32.0F, (float) z).color(255, 255, 255, 255).endVertex();
-        bufferbuilder.vertex(0.0D, 0.0D, 0.0D).uv(0.0F, (float) z).color(255, 255, 255, 255).endVertex();
-        tesselator.end();
+    public void renderGreenscreen(GuiGraphics guiGraphics) {
+        guiGraphics.fill(0, 0, this.width, this.height, 0xFF4CFF00);
     }
 
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
-        if(screenshot){
-            screenshot = false;
-            ItemStack itemStack = zoomerBase.getItem(0);
-            String name = itemStack.isEmpty() || itemStack == null ? "none" : itemStack.getItem().toString();
-            ScreenshotHelper.exportScreenshot(name, () -> {
-                renderFocus(guiGraphics);
-            });
-            if(screenshotButton != null){
-                screenshotButton.setFocused(false);
-            }
-        }
         if (getMinecraft() != null) {
             try {
-                if (greenscreen) {
-                    renderGreenscreen(10);
+                if (background == ExportTask.Background.GREENSCREEN) {
+                    renderGreenscreen(guiGraphics);
                 } else {
                     this.renderBackground(guiGraphics);
                 }
@@ -141,5 +144,25 @@ public class GuiItemZoomer extends Screen {
 
     public boolean isPauseScreen() {
         return false;
+    }
+
+    private static int findDefaultExportSizeIndex() {
+        int defaultSize = ExportManager.getDefaultExportSize();
+        for (int i = 0; i < EXPORT_SIZES.length; i++) {
+            if (EXPORT_SIZES[i] == defaultSize) {
+                return i;
+            }
+        }
+        return EXPORT_SIZES.length - 1;
+    }
+
+    private int getExportSize() {
+        return EXPORT_SIZES[exportSizeIndex];
+    }
+
+    private Component getBackgroundLabel() {
+        return background == ExportTask.Background.GREENSCREEN
+                ? Component.translatable("gui.wikizoomer.background.greenscreen")
+                : Component.translatable("gui.wikizoomer.background.transparent");
     }
 }
