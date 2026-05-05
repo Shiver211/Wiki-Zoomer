@@ -36,7 +36,7 @@ public class BlockZoomer extends BlockContainer {
         this.setSoundType(SoundType.METAL);
         this.setHardness(5F);
         this.setResistance(20F);
-        this.setCreativeTab(CreativeTabs.DECORATIONS);
+        this.setCreativeTab(WikiZoomerMod.TAB);
         this.setTickRandomly(true);
         this.setRegistryName("wikizoomer", (itemOrEntity ? "item_zoomer" : "entity_zoomer"));
         this.setTranslationKey("wikizoomer." + (itemOrEntity ? "item_zoomer" : "entity_zoomer"));

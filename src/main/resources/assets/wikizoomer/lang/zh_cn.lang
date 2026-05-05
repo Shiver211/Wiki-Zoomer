@@ -32,3 +32,4 @@ gui.wikizoomer.export_no_entity=无可导出的实体
 gui.wikizoomer.batch_started=批量导出已排队：%s
 gui.wikizoomer.batch_done=批量导出完成
 gui.wikizoomer.export_done=已导出：%s
+itemGroup.wikizoomer=Wiki Zoomer

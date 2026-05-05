@@ -3,8 +3,10 @@ package com.github.alexthe666.wikizoomer;
 import com.github.alexthe666.wikizoomer.tileentity.TileEntityEntityZoomer;
 import com.github.alexthe666.wikizoomer.tileentity.TileEntityItemZoomer;
 import net.minecraft.block.Block;
+import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemBlock;
+import net.minecraft.item.ItemStack;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.RegistryEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -21,6 +23,13 @@ public class WikiZoomerMod {
     private static final Logger LOGGER = LogManager.getLogger();
     @SidedProxy(clientSide = "com.github.alexthe666.wikizoomer.ClientProxy", serverSide = "com.github.alexthe666.wikizoomer.CommonProxy")
     public static CommonProxy PROXY;
+
+    public static final CreativeTabs TAB = new CreativeTabs("wikizoomer") {
+        @Override
+        public ItemStack createIcon() {
+            return new ItemStack(ITEM_ZOOMER_BLOCK);
+        }
+    };
 
     public static final Item ENTITY_BINDER_ITEM = new ItemEntityBinder();
     public static final Block ITEM_ZOOMER_BLOCK = new BlockZoomer(true);

@@ -32,3 +32,4 @@ gui.wikizoomer.export_no_entity=No entity to export
 gui.wikizoomer.batch_started=Batch export queued: %s
 gui.wikizoomer.batch_done=Batch export completed
 gui.wikizoomer.export_done=Exported: %s
+itemGroup.wikizoomer=Wiki Zoomer
