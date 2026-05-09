@@ -139,7 +139,7 @@ public class GuiItemZoomer extends Screen {
         if (!itemStack.isEmpty()) {
             guiGraphics.pose().pushPose();
             guiGraphics.pose().translate(i, j, 10F);
-            guiGraphics.pose().translate(113.5F - scale1 * 100, 76 - scale1 * 100, 1000F - sliderValue * 20);
+            guiGraphics.pose().translate(113.5F - scale1 * 100, 76 - scale1 * 100, 2500F - sliderValue * 20);
             guiGraphics.pose().scale(scale, scale, scale);
             guiGraphics.renderItem(Minecraft.getInstance().player, itemStack, 0, 0, 1);
             guiGraphics.pose().popPose();
