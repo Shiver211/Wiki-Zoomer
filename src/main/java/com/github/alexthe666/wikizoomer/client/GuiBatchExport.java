@@ -135,7 +135,7 @@ public class GuiBatchExport extends Screen {
                 if (id == null || !modIds.contains(id.getNamespace())) {
                     continue;
                 }
-                ExportTask task = ExportManager.createItemTask(new ItemStack(item), zoomPercent, background, exportSize, true);
+                ExportTask task = ExportManager.createItemTask(new ItemStack(item), zoomPercent, background, exportSize, true, 0.0F, 0.0F);
                 if (task != null) {
                     tasks.add(task);
                 }
@@ -147,7 +147,7 @@ public class GuiBatchExport extends Screen {
                 if (id == null || !modIds.contains(id.getNamespace())) {
                     continue;
                 }
-                ExportTask task = ExportManager.createEntityIdTask(id, zoomPercent, background, exportSize, true);
+                ExportTask task = ExportManager.createEntityIdTask(id, zoomPercent, background, exportSize, true, 30.0F, 45.0F);
                 if (task != null) {
                     tasks.add(task);
                 }

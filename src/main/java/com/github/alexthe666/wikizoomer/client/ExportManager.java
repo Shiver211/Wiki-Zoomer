@@ -81,7 +81,7 @@ public class ExportManager {
         sendChat(Component.translatable("gui.wikizoomer.batch_started", tasks.size()));
     }
 
-    public static ExportTask createItemTask(ItemStack stack, float zoomPercent, ExportTask.Background background, int exportSize, boolean isBatch) {
+    public static ExportTask createItemTask(ItemStack stack, float zoomPercent, ExportTask.Background background, int exportSize, boolean isBatch, float rotX, float rotY) {
         if (stack == null || stack.isEmpty()) {
             return null;
         }
@@ -90,10 +90,10 @@ public class ExportManager {
             return null;
         }
         File output = getOutputFile(id);
-        return ExportTask.forItem(stack, output, background, isBatch, zoomPercent, exportSize);
+        return ExportTask.forItem(stack, output, background, isBatch, zoomPercent, exportSize, rotX, rotY);
     }
 
-    public static ExportTask createEntityTask(Entity entity, float zoomPercent, ExportTask.Background background, int exportSize, boolean isBatch) {
+    public static ExportTask createEntityTask(Entity entity, float zoomPercent, ExportTask.Background background, int exportSize, boolean isBatch, float rotX, float rotY) {
         if (entity == null) {
             return null;
         }
@@ -102,15 +102,15 @@ public class ExportManager {
             return null;
         }
         File output = getOutputFile(id);
-        return ExportTask.forEntity(entity, output, background, isBatch, zoomPercent, exportSize);
+        return ExportTask.forEntity(entity, output, background, isBatch, zoomPercent, exportSize, rotX, rotY);
     }
 
-    public static ExportTask createEntityIdTask(ResourceLocation entityId, float zoomPercent, ExportTask.Background background, int exportSize, boolean isBatch) {
+    public static ExportTask createEntityIdTask(ResourceLocation entityId, float zoomPercent, ExportTask.Background background, int exportSize, boolean isBatch, float rotX, float rotY) {
         if (entityId == null) {
             return null;
         }
         File output = getOutputFile(entityId);
-        return ExportTask.forEntityId(entityId, output, background, isBatch, zoomPercent, exportSize);
+        return ExportTask.forEntityId(entityId, output, background, isBatch, zoomPercent, exportSize, rotX, rotY);
     }
 
     public static void tick() {
@@ -202,12 +202,12 @@ public class ExportManager {
         poseStack.pushPose();
         poseStack.translate(0.0F, 0.0F, -2000.0F);
         if (task.type == ExportTask.Type.ITEM) {
-            renderItemCentered(poseStack, bufferSource, task.itemStack, task.exportSize, task.zoomPercent);
+            renderItemCentered(poseStack, bufferSource, task.itemStack, task.exportSize, task.zoomPercent, task.rotX, task.rotY);
         } else {
             if (entity == null) {
                 return false;
             }
-            renderEntityCentered(poseStack, bufferSource, entity, task.exportSize, task.zoomPercent);
+            renderEntityCentered(poseStack, bufferSource, entity, task.exportSize, task.zoomPercent, task.rotX, task.rotY);
         }
         bufferSource.endBatch();
         poseStack.popPose();
@@ -254,11 +254,14 @@ public class ExportManager {
         return type.create(mc.level);
     }
 
-    private static void renderItemCentered(PoseStack poseStack, MultiBufferSource.BufferSource bufferSource, ItemStack stack, int exportSize, float zoomPercent) {
+    private static void renderItemCentered(PoseStack poseStack, MultiBufferSource.BufferSource bufferSource, ItemStack stack, int exportSize, float zoomPercent, float rotX, float rotY) {
         float scale = exportSize * (zoomPercent / 100.0F);
         poseStack.pushPose();
         poseStack.translate(exportSize / 2.0F, exportSize / 2.0F, 100.0F);
         poseStack.scale(scale, -scale, scale);
+        
+        poseStack.mulPose(Axis.XP.rotationDegrees(rotX));
+        poseStack.mulPose(Axis.YP.rotationDegrees(rotY));
 
         Minecraft mc = Minecraft.getInstance();
         BakedModel model = mc.getItemRenderer().getModel(stack, mc.level, null, 0);
@@ -274,7 +277,7 @@ public class ExportManager {
         poseStack.popPose();
     }
 
-    private static void renderEntityCentered(PoseStack poseStack, MultiBufferSource.BufferSource bufferSource, Entity entity, int exportSize, float zoomPercent) {
+    private static void renderEntityCentered(PoseStack poseStack, MultiBufferSource.BufferSource bufferSource, Entity entity, int exportSize, float zoomPercent, float rotX, float rotY) {
         int centerX = exportSize / 2;
         int centerY = (exportSize + (int) ((zoomPercent / 100.0F) * (entity.getBbHeight() * 100.0F))) / 2;
         Entity renderEntity = entity;
@@ -289,12 +292,16 @@ public class ExportManager {
         poseStack.translate(centerX, centerY, 10.0F);
         poseStack.scale(zoomPercent, zoomPercent, zoomPercent);
         poseStack.mulPose(Axis.ZP.rotationDegrees(180.0F));
-        poseStack.mulPose(Axis.XP.rotationDegrees(30.0F));
-        poseStack.mulPose(Axis.YP.rotationDegrees(45.0F));
+        
+        float halfHeight = finalRenderEntity.getBbHeight() / 2.0F;
+        poseStack.translate(0.0F, halfHeight, 0.0F);
+        poseStack.mulPose(Axis.XP.rotationDegrees(rotX));
+        poseStack.mulPose(Axis.YP.rotationDegrees(rotY));
+        poseStack.translate(0.0F, -halfHeight, 0.0F);
 
         Minecraft mc = Minecraft.getInstance();
         EntityRenderDispatcher entityRenderDispatcher = mc.getEntityRenderDispatcher();
-        Quaternionf cameraOrientation = Axis.XP.rotationDegrees(30.0F);
+        Quaternionf cameraOrientation = Axis.XP.rotationDegrees(rotX);
         cameraOrientation.conjugate();
         entityRenderDispatcher.overrideCameraOrientation(cameraOrientation);
         entityRenderDispatcher.setRenderShadow(false);

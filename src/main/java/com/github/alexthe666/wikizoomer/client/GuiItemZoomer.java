@@ -11,6 +11,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.GameRenderer;
+import com.mojang.math.Axis;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
@@ -33,6 +34,9 @@ public class GuiItemZoomer extends Screen {
     private float prevSliderValue = sliderValue;
     private int exportSizeIndex = findDefaultExportSizeIndex();
     private static final int[] EXPORT_SIZES = ExportManager.getExportSizes();
+    private float rotX = 0F;
+    private float rotY = 0F;
+    private ForgeSlider zoomSlider;
 
     public GuiItemZoomer(TileEntityZoomerBase zoomerBase) {
         super(Component.translatable("item_zoomer"));
@@ -65,12 +69,13 @@ public class GuiItemZoomer extends Screen {
         int col3X = startX + (buttonWidth + spacing) * 2;
         int row1Y = j + 180;
         int row2Y = row1Y + 22;
-        this.addRenderableWidget(new ForgeSlider(col1X, row1Y, buttonWidth, buttonHeight, Component.translatable("gui.wikizoomer.zoom"), Component.literal("%"), 1, 1000, sliderValue, 1, 1, true) {
+        this.zoomSlider = new ForgeSlider(col1X, row1Y, buttonWidth, buttonHeight, Component.translatable("gui.wikizoomer.zoom"), Component.literal("%"), 1, 1000, sliderValue, 1, 1, true) {
             @Override
             protected void applyValue() {
                 GuiItemZoomer.this.setSliderValue(2, (float)getValue());
             }
-        });
+        };
+        this.addRenderableWidget(this.zoomSlider);
         this.addRenderableWidget(Button.builder(backgroundLabel, (button) -> {
             GuiItemZoomer.this.background = GuiItemZoomer.this.background == ExportTask.Background.GREENSCREEN
                     ? ExportTask.Background.TRANSPARENT
@@ -78,7 +83,7 @@ public class GuiItemZoomer extends Screen {
             init();
         }).size(buttonWidth, buttonHeight).pos(col2X, row1Y).build());
         this.addRenderableWidget(Button.builder(export, (button) -> {
-            ExportTask task = ExportManager.createItemTask(zoomerBase.getItem(0), sliderValue, background, getExportSize(), false);
+            ExportTask task = ExportManager.createItemTask(zoomerBase.getItem(0), sliderValue, background, getExportSize(), false, rotX, rotY);
             if (task == null) {
                 if (Minecraft.getInstance().player != null) {
                     Minecraft.getInstance().player.sendSystemMessage(Component.translatable("gui.wikizoomer.export_no_item"));
@@ -141,6 +146,10 @@ public class GuiItemZoomer extends Screen {
             guiGraphics.pose().translate(i, j, 10F);
             guiGraphics.pose().translate(113.5F - scale1 * 100, 76 - scale1 * 100, 2500F - sliderValue * 20);
             guiGraphics.pose().scale(scale, scale, scale);
+            guiGraphics.pose().translate(8.0F, 8.0F, 150.0F);
+            guiGraphics.pose().mulPose(Axis.XP.rotationDegrees(rotX));
+            guiGraphics.pose().mulPose(Axis.YP.rotationDegrees(rotY));
+            guiGraphics.pose().translate(-8.0F, -8.0F, -150.0F);
             guiGraphics.renderItem(Minecraft.getInstance().player, itemStack, 0, 0, 1);
             guiGraphics.pose().popPose();
         }
@@ -168,5 +177,25 @@ public class GuiItemZoomer extends Screen {
         return background == ExportTask.Background.GREENSCREEN
                 ? Component.translatable("gui.wikizoomer.background.greenscreen")
                 : Component.translatable("gui.wikizoomer.background.transparent");
+    }
+
+    @Override
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        if (button == 0) {
+            rotY -= (float) dragX;
+            rotX -= (float) dragY;
+            return true;
+        }
+        return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+        float newSliderValue = this.sliderValue + (float) delta * 10F;
+        setSliderValue(2, newSliderValue);
+        if (zoomSlider != null) {
+            zoomSlider.setValue(this.sliderValue);
+        }
+        return true;
     }
 }

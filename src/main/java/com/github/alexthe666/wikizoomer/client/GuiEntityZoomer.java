@@ -37,6 +37,9 @@ public class GuiEntityZoomer extends Screen {
     private float prevSliderValue = sliderValue;
     private int exportSizeIndex = findDefaultExportSizeIndex();
     private static final int[] EXPORT_SIZES = ExportManager.getExportSizes();
+    private float rotX = 30F;
+    private float rotY = 45F;
+    private ForgeSlider zoomSlider;
 
     public GuiEntityZoomer(TileEntityEntityZoomer zoomerBase) {
         super(Component.translatable("entity_zoomer"));
@@ -68,12 +71,13 @@ public class GuiEntityZoomer extends Screen {
         int col3X = startX + (buttonWidth + spacing) * 2;
         int row1Y = j + 180;
         int row2Y = row1Y + 22;
-        this.addRenderableWidget(new ForgeSlider(col1X, row1Y, buttonWidth, buttonHeight, Component.translatable("gui.wikizoomer.zoom"), Component.literal("%"), 1, 1000, sliderValue, 1, 1, true){
+        this.zoomSlider = new ForgeSlider(col1X, row1Y, buttonWidth, buttonHeight, Component.translatable("gui.wikizoomer.zoom"), Component.literal("%"), 1, 1000, sliderValue, 1, 1, true){
             @Override
             protected void applyValue() {
                 GuiEntityZoomer.this.setSliderValue(2, (float)getValue());
             }
-        });
+        };
+        this.addRenderableWidget(this.zoomSlider);
         this.addRenderableWidget(Button.builder(backgroundLabel, (button) -> {
             GuiEntityZoomer.this.background = GuiEntityZoomer.this.background == ExportTask.Background.GREENSCREEN
                     ? ExportTask.Background.TRANSPARENT
@@ -82,7 +86,7 @@ public class GuiEntityZoomer extends Screen {
         }).size(buttonWidth, buttonHeight).pos(col2X, row1Y).build());
         this.addRenderableWidget(Button.builder(export, (button) -> {
             Entity renderEntity = zoomerBase.getCachedEntity();
-            ExportTask task = ExportManager.createEntityTask(renderEntity, sliderValue, background, getExportSize(), false);
+            ExportTask task = ExportManager.createEntityTask(renderEntity, sliderValue, background, getExportSize(), false, rotX, rotY);
             if (task == null) {
                 if (Minecraft.getInstance().player != null) {
                     Minecraft.getInstance().player.sendSystemMessage(Component.translatable("gui.wikizoomer.export_no_entity"));
@@ -151,7 +155,7 @@ public class GuiEntityZoomer extends Screen {
             }
             if(renderEntity instanceof LivingEntity){
                 guiGraphics.pose().translate(i, j, 10F);
-                drawEntityOnScreen(guiGraphics, 100, 0, scale2,  false, -30, 135, 180, 0, 0, (LivingEntity)renderEntity, isMimic);
+                drawEntityOnScreen(guiGraphics, 100, 0, scale2,  false, rotX, rotY, 0, 0, 0, (LivingEntity)renderEntity, isMimic);
             }
         }
         guiGraphics.pose().popPose();
@@ -169,12 +173,16 @@ public class GuiEntityZoomer extends Screen {
         float partialTicks = Minecraft.getInstance().getFrameTime();
         RenderSystem.applyModelViewMatrix();
 
-        Quaternionf quaternion1 = Axis.XP.rotationDegrees(30);
-        Quaternionf quaternion2 = Axis.YP.rotationDegrees(45);
-        Quaternionf quaternion = Axis.ZP.rotationDegrees(0.0F);
+        Quaternionf quaternion1 = Axis.XP.rotationDegrees((float)xRot);
+        Quaternionf quaternion2 = Axis.YP.rotationDegrees((float)yRot);
+        Quaternionf quaternion = Axis.ZP.rotationDegrees((float)zRot);
         quaternion.mul(quaternion1);
+        
+        float halfHeight = entity.getBbHeight() / 2.0F;
+        guiGraphics.pose().translate(0.0F, halfHeight, 0.0F);
         guiGraphics.pose().mulPose(quaternion);
         guiGraphics.pose().mulPose(quaternion2);
+        guiGraphics.pose().translate(0.0F, -halfHeight, 0.0F);
         Vector3f INVENTORY_DIFFUSE_LIGHT_0 = Util.make(new Vector3f(-0.2F, 0.0F, 1.0F), Vector3f::normalize);
         Vector3f INVENTORY_DIFFUSE_LIGHT_1 = Util.make(new Vector3f(-0.2F, -1.0F, 0.0F), Vector3f::normalize);
 
@@ -227,5 +235,25 @@ public class GuiEntityZoomer extends Screen {
         return background == ExportTask.Background.GREENSCREEN
                 ? Component.translatable("gui.wikizoomer.background.greenscreen")
                 : Component.translatable("gui.wikizoomer.background.transparent");
+    }
+
+    @Override
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        if (button == 0) {
+            rotY -= (float) dragX;
+            rotX -= (float) dragY;
+            return true;
+        }
+        return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+        float newSliderValue = this.sliderValue + (float) delta * 10F;
+        setSliderValue(2, newSliderValue);
+        if (zoomSlider != null) {
+            zoomSlider.setValue(this.sliderValue);
+        }
+        return true;
     }
 }
