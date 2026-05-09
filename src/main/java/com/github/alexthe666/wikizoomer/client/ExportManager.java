@@ -256,7 +256,7 @@ public class ExportManager {
     }
 
     private static void renderItemCentered(PoseStack poseStack, MultiBufferSource.BufferSource bufferSource, ItemStack stack, int exportSize, float zoomPercent, float rotX, float rotY) {
-        float scale = exportSize * (zoomPercent / 100.0F);
+        float scale = zoomPercent * 1.92F;
         poseStack.pushPose();
         poseStack.translate(exportSize / 2.0F, exportSize / 2.0F, 100.0F);
         poseStack.scale(scale, -scale, scale);
