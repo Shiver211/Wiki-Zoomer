@@ -201,6 +201,7 @@ public class ExportManager {
 
         poseStack.pushPose();
         poseStack.translate(0.0F, 0.0F, -2000.0F);
+        poseStack.scale(1.0F, 1.0F, 0.01F);
         if (task.type == ExportTask.Type.ITEM) {
             renderItemCentered(poseStack, bufferSource, task.itemStack, task.exportSize, task.zoomPercent, task.rotX, task.rotY);
         } else {

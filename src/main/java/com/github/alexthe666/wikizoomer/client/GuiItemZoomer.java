@@ -144,6 +144,7 @@ public class GuiItemZoomer extends Screen {
         if (!itemStack.isEmpty()) {
             guiGraphics.pose().pushPose();
             guiGraphics.pose().translate(i, j, 10F);
+            guiGraphics.pose().scale(1.0F, 1.0F, 0.01F);
             guiGraphics.pose().translate(113.5F - scale1 * 100, 76 - scale1 * 100, 2500F - sliderValue * 20);
             guiGraphics.pose().scale(scale, scale, scale);
             guiGraphics.pose().translate(8.0F, 8.0F, 150.0F);
@@ -181,12 +182,15 @@ public class GuiItemZoomer extends Screen {
 
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        if (super.mouseDragged(mouseX, mouseY, button, dragX, dragY)) {
+            return true;
+        }
         if (button == 0) {
             rotY -= (float) dragX;
             rotX -= (float) dragY;
             return true;
         }
-        return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+        return false;
     }
 
     @Override

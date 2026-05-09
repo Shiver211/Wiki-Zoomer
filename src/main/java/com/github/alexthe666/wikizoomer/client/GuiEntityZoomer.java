@@ -134,6 +134,7 @@ public class GuiEntityZoomer extends Screen {
     private void renderFocus(GuiGraphics guiGraphics) {
         guiGraphics.pose().pushPose();
         guiGraphics.pose().translate(0, 0, 1000F);
+        guiGraphics.pose().scale(1.0F, 1.0F, 0.01F);
         Entity renderEntity = zoomerBase.getCachedEntity();
         float scale = prevSliderValue + (sliderValue - prevSliderValue) * Minecraft.getInstance().getFrameTime();
         if (renderEntity != null) {
@@ -239,12 +240,15 @@ public class GuiEntityZoomer extends Screen {
 
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        if (super.mouseDragged(mouseX, mouseY, button, dragX, dragY)) {
+            return true;
+        }
         if (button == 0) {
             rotY -= (float) dragX;
             rotX -= (float) dragY;
             return true;
         }
-        return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+        return false;
     }
 
     @Override
