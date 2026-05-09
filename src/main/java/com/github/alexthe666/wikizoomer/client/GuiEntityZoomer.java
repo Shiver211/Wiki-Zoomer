@@ -44,7 +44,7 @@ public class GuiEntityZoomer extends Screen {
     }
 
     private void setSliderValue(int i, float sliderValue) {
-        this.sliderValue = Math.round(Mth.clamp(sliderValue, 1, 300F));
+        this.sliderValue = Math.round(Mth.clamp(sliderValue, 1, 1000F));
         prevSliderValue = this.sliderValue;
     }
 
@@ -68,7 +68,7 @@ public class GuiEntityZoomer extends Screen {
         int col3X = startX + (buttonWidth + spacing) * 2;
         int row1Y = j + 180;
         int row2Y = row1Y + 22;
-        this.addRenderableWidget(new ForgeSlider(col1X, row1Y, buttonWidth, buttonHeight, Component.translatable("gui.wikizoomer.zoom"), Component.literal("%"), 1, 300, sliderValue, 1, 1, true){
+        this.addRenderableWidget(new ForgeSlider(col1X, row1Y, buttonWidth, buttonHeight, Component.translatable("gui.wikizoomer.zoom"), Component.literal("%"), 1, 1000, sliderValue, 1, 1, true){
             @Override
             protected void applyValue() {
                 GuiEntityZoomer.this.setSliderValue(2, (float)getValue());
@@ -120,8 +120,11 @@ public class GuiEntityZoomer extends Screen {
 
             }
         }
-        super.render(guiGraphics, mouseX, mouseY, partialTicks);
         renderFocus(guiGraphics);
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(0, 0, 5000F);
+        super.render(guiGraphics, mouseX, mouseY, partialTicks);
+        guiGraphics.pose().popPose();
     }
 
     private void renderFocus(GuiGraphics guiGraphics) {

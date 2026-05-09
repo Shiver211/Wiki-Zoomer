@@ -43,7 +43,7 @@ import java.util.Queue;
 @OnlyIn(Dist.CLIENT)
 public class ExportManager {
     private static final Logger LOGGER = LogManager.getLogger();
-    private static final int[] EXPORT_SIZES = new int[]{64, 128, 256, 512};
+    private static final int[] EXPORT_SIZES = new int[]{64, 128, 256, 512, 1024, 4096};
     private static final int DEFAULT_EXPORT_SIZE = 512;
     private static final float DEFAULT_ZOOM = 100F;
     private static final Queue<ExportTask> QUEUE = new ArrayDeque<>();

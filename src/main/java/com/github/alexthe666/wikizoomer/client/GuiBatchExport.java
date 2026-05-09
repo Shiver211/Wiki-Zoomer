@@ -77,7 +77,7 @@ public class GuiBatchExport extends Screen {
         this.addRenderableWidget(entitiesButton);
         this.addRenderableWidget(backgroundButton);
 
-        this.addRenderableWidget(new ForgeSlider(col1X, row2Y, buttonWidth, buttonHeight, Component.translatable("gui.wikizoomer.zoom"), Component.literal("%"), 1, 300, zoomPercent, 1, 1, true) {
+        this.addRenderableWidget(new ForgeSlider(col1X, row2Y, buttonWidth, buttonHeight, Component.translatable("gui.wikizoomer.zoom"), Component.literal("%"), 1, 1000, zoomPercent, 1, 1, true) {
             @Override
             protected void applyValue() {
                 GuiBatchExport.this.zoomPercent = (float)getValue();
