@@ -1,5 +1,6 @@
-package com.github.alexthe666.wikizoomer.tileentity;
+package com.shiver.wikizoomer.tileentity;
 
+import com.shiver.wikizoomer.WikiZoomerUnofficial;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.Level;
@@ -8,7 +9,7 @@ import net.minecraft.world.level.block.state.BlockState;
 public class TileEntityItemZoomer extends TileEntityZoomerBase {
 
     public TileEntityItemZoomer(BlockPos pos, BlockState state) {
-        super(TileEntityRegistry.ITEM_ZOOMER_TE.get(), pos, state);
+        super(WikiZoomerUnofficial.ITEM_ZOOMER_TE.get(), pos, state);
     }
 
     public static void tick(Level level, BlockPos pos, BlockState state, TileEntityItemZoomer entity) {

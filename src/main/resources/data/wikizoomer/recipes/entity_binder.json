@@ -5,14 +5,13 @@
       "item": "minecraft:paper"
     },
     {
-      "tag": "forge:dyes/purple"
+      "tag": "c:dyes/purple"
     },
     {
       "item": "minecraft:bone"
     }
   ],
   "result": {
-    "item": "wikizoomer:entity_binder",
-    "count": 1
+    "id": "wikizoomer:entity_binder"
   }
 }

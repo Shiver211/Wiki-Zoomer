@@ -1,22 +1,24 @@
-package com.github.alexthe666.wikizoomer.client;
+package com.shiver.wikizoomer.screen;
 
+import com.shiver.wikizoomer.client.ExportManager;
+import com.shiver.wikizoomer.client.ExportTask;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.AbstractSliderButton;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.ObjectSelectionList;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-import net.minecraftforge.client.gui.widget.ForgeSlider;
-import net.minecraftforge.fml.ModList;
-import net.minecraftforge.forgespi.language.IModInfo;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
+import net.neoforged.fml.ModContainer;
+import net.neoforged.fml.ModList;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -58,58 +60,61 @@ public class GuiBatchExport extends Screen {
         int row3Y = row2Y + 22;
         int listTop = 32;
         int listBottom = row1Y - 10;
-        this.modList = new ModListWidget(this.minecraft, this.width, this.height, listTop, listBottom, 20, this.entries);
+
+        this.modList = new ModListWidget(this.minecraft, this.width, listBottom - listTop, listTop, 20, this.entries);
         this.addRenderableWidget(this.modList);
 
-        Button itemsButton = Button.builder(Component.translatable("gui.wikizoomer.batch_items", exportItems ? "ON" : "OFF"), (button) -> {
-            exportItems = !exportItems;
-            init();
-        }).size(buttonWidth, buttonHeight).pos(col1X, row1Y).build();
-        Button entitiesButton = Button.builder(Component.translatable("gui.wikizoomer.batch_entities", exportEntities ? "ON" : "OFF"), (button) -> {
-            exportEntities = !exportEntities;
-            init();
-        }).size(buttonWidth, buttonHeight).pos(col2X, row1Y).build();
-        Button backgroundButton = Button.builder(Component.translatable("gui.wikizoomer.background", getBackgroundLabel()), (button) -> {
-            background = background == ExportTask.Background.GREENSCREEN ? ExportTask.Background.TRANSPARENT : ExportTask.Background.GREENSCREEN;
-            init();
-        }).size(buttonWidth, buttonHeight).pos(col3X, row1Y).build();
-        this.addRenderableWidget(itemsButton);
-        this.addRenderableWidget(entitiesButton);
-        this.addRenderableWidget(backgroundButton);
+        this.addRenderableWidget(Button.builder(
+                Component.translatable("gui.wikizoomer.batch_items", exportItems ? "ON" : "OFF"), (button) -> {
+                    exportItems = !exportItems;
+                    init();
+                }).size(buttonWidth, buttonHeight).pos(col1X, row1Y).build());
 
-        this.addRenderableWidget(new ForgeSlider(col1X, row2Y, buttonWidth, buttonHeight, Component.translatable("gui.wikizoomer.zoom"), Component.literal("%"), 1, 1000, zoomPercent, 1, 1, true) {
-            @Override
-            protected void applyValue() {
-                GuiBatchExport.this.zoomPercent = (float)getValue();
-            }
-        });
-        Button resolutionButton = Button.builder(Component.translatable("gui.wikizoomer.resolution", getExportSize(), getExportSize()), (button) -> {
-            exportSizeIndex = (exportSizeIndex + 1) % EXPORT_SIZES.length;
-            init();
-        }).size(buttonWidth, buttonHeight).pos(col2X, row2Y).build();
-        Button selectAllButton = Button.builder(Component.translatable("gui.wikizoomer.batch_select_all"), (button) -> {
-            setAllSelected(true);
-        }).size(buttonWidth, buttonHeight).pos(col3X, row2Y).build();
-        this.addRenderableWidget(resolutionButton);
-        this.addRenderableWidget(selectAllButton);
+        this.addRenderableWidget(Button.builder(
+                Component.translatable("gui.wikizoomer.batch_entities", exportEntities ? "ON" : "OFF"), (button) -> {
+                    exportEntities = !exportEntities;
+                    init();
+                }).size(buttonWidth, buttonHeight).pos(col2X, row1Y).build());
 
-        Button clearButton = Button.builder(Component.translatable("gui.wikizoomer.batch_clear"), (button) -> {
-            setAllSelected(false);
-        }).size(buttonWidth, buttonHeight).pos(col1X, row3Y).build();
-        Button startButton = Button.builder(Component.translatable("gui.wikizoomer.batch_start"), (button) -> {
-            startExport();
-        }).size(buttonWidth, buttonHeight).pos(col2X, row3Y).build();
-        Button closeButton = Button.builder(Component.translatable("gui.wikizoomer.close"), (button) -> {
-            Minecraft.getInstance().setScreen(null);
-        }).size(buttonWidth, buttonHeight).pos(col3X, row3Y).build();
-        this.addRenderableWidget(clearButton);
-        this.addRenderableWidget(startButton);
-        this.addRenderableWidget(closeButton);
+        this.addRenderableWidget(Button.builder(
+                Component.translatable("gui.wikizoomer.background", getBackgroundLabel()), (button) -> {
+                    background = background == ExportTask.Background.GREENSCREEN
+                            ? ExportTask.Background.TRANSPARENT : ExportTask.Background.GREENSCREEN;
+                    init();
+                }).size(buttonWidth, buttonHeight).pos(col3X, row1Y).build());
+
+        this.addRenderableWidget(new ZoomSlider(col1X, row2Y, buttonWidth, buttonHeight));
+
+        this.addRenderableWidget(Button.builder(
+                Component.translatable("gui.wikizoomer.resolution", getExportSize(), getExportSize()), (button) -> {
+                    exportSizeIndex = (exportSizeIndex + 1) % EXPORT_SIZES.length;
+                    init();
+                }).size(buttonWidth, buttonHeight).pos(col2X, row2Y).build());
+
+        this.addRenderableWidget(Button.builder(
+                Component.translatable("gui.wikizoomer.batch_select_all"), (button) -> {
+                    setAllSelected(true);
+                }).size(buttonWidth, buttonHeight).pos(col3X, row2Y).build());
+
+        this.addRenderableWidget(Button.builder(
+                Component.translatable("gui.wikizoomer.batch_clear"), (button) -> {
+                    setAllSelected(false);
+                }).size(buttonWidth, buttonHeight).pos(col1X, row3Y).build());
+
+        this.addRenderableWidget(Button.builder(
+                Component.translatable("gui.wikizoomer.batch_start"), (button) -> {
+                    startExport();
+                }).size(buttonWidth, buttonHeight).pos(col2X, row3Y).build());
+
+        this.addRenderableWidget(Button.builder(
+                Component.translatable("gui.wikizoomer.close"), (button) -> {
+                    Minecraft.getInstance().setScreen(null);
+                }).size(buttonWidth, buttonHeight).pos(col3X, row3Y).build());
     }
 
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
-        this.renderBackground(guiGraphics);
+        this.renderBackground(guiGraphics, mouseX, mouseY, partialTicks);
         super.render(guiGraphics, mouseX, mouseY, partialTicks);
         guiGraphics.drawCenteredString(this.font, Component.translatable("gui.wikizoomer.batch_title"), this.width / 2, 12, 0xFFFFFF);
     }
@@ -127,30 +132,20 @@ public class GuiBatchExport extends Screen {
         List<ExportTask> tasks = new ArrayList<>();
         int exportSize = getExportSize();
         if (exportItems) {
-            for (Item item : ForgeRegistries.ITEMS.getValues()) {
-                if (item == Items.AIR) {
-                    continue;
-                }
-                ResourceLocation id = ForgeRegistries.ITEMS.getKey(item);
-                if (id == null || !modIds.contains(id.getNamespace())) {
-                    continue;
-                }
+            for (Item item : BuiltInRegistries.ITEM) {
+                if (item == Items.AIR) continue;
+                ResourceLocation id = BuiltInRegistries.ITEM.getKey(item);
+                if (id == null || !modIds.contains(id.getNamespace())) continue;
                 ExportTask task = ExportManager.createItemTask(new ItemStack(item), zoomPercent, background, exportSize, true, 0.0F, 0.0F);
-                if (task != null) {
-                    tasks.add(task);
-                }
+                if (task != null) tasks.add(task);
             }
         }
         if (exportEntities) {
-            for (EntityType<?> entityType : ForgeRegistries.ENTITY_TYPES.getValues()) {
-                ResourceLocation id = ForgeRegistries.ENTITY_TYPES.getKey(entityType);
-                if (id == null || !modIds.contains(id.getNamespace())) {
-                    continue;
-                }
+            for (EntityType<?> entityType : BuiltInRegistries.ENTITY_TYPE) {
+                ResourceLocation id = BuiltInRegistries.ENTITY_TYPE.getKey(entityType);
+                if (id == null || !modIds.contains(id.getNamespace())) continue;
                 ExportTask task = ExportManager.createEntityIdTask(id, zoomPercent, background, exportSize, true, 30.0F, 45.0F);
-                if (task != null) {
-                    tasks.add(task);
-                }
+                if (task != null) tasks.add(task);
             }
         }
         if (tasks.isEmpty()) {
@@ -164,9 +159,7 @@ public class GuiBatchExport extends Screen {
     private Set<String> getSelectedModIds() {
         Set<String> modIds = new HashSet<>();
         for (ModEntry entry : entries) {
-            if (entry.selected) {
-                modIds.add(entry.modId);
-            }
+            if (entry.selected) modIds.add(entry.modId);
         }
         return modIds;
     }
@@ -178,11 +171,11 @@ public class GuiBatchExport extends Screen {
     }
 
     private List<ModEntry> buildEntries() {
-        List<IModInfo> mods = new ArrayList<>(ModList.get().getMods());
-        mods.sort(Comparator.comparing(IModInfo::getModId));
+        List<ModContainer> mods = new ArrayList<>(ModList.get().getSortedMods());
+        mods.sort(Comparator.comparing(ModContainer::getModId));
         List<ModEntry> list = new ArrayList<>();
-        for (IModInfo mod : mods) {
-            list.add(new ModEntry(mod.getModId(), mod.getDisplayName()));
+        for (ModContainer mod : mods) {
+            list.add(new ModEntry(mod.getModId(), mod.getModInfo().getDisplayName()));
         }
         return list;
     }
@@ -196,9 +189,7 @@ public class GuiBatchExport extends Screen {
     private static int findDefaultExportSizeIndex() {
         int defaultSize = ExportManager.getDefaultExportSize();
         for (int i = 0; i < EXPORT_SIZES.length; i++) {
-            if (EXPORT_SIZES[i] == defaultSize) {
-                return i;
-            }
+            if (EXPORT_SIZES[i] == defaultSize) return i;
         }
         return EXPORT_SIZES.length - 1;
     }
@@ -214,9 +205,9 @@ public class GuiBatchExport extends Screen {
     }
 
     @OnlyIn(Dist.CLIENT)
-    private static class ModListWidget extends ObjectSelectionList<ModEntry> {
-        public ModListWidget(Minecraft minecraft, int width, int height, int top, int bottom, int itemHeight, List<ModEntry> entries) {
-            super(minecraft, width, height, top, bottom, itemHeight);
+    private class ModListWidget extends ObjectSelectionList<ModEntry> {
+        public ModListWidget(Minecraft minecraft, int width, int height, int y, int itemHeight, List<ModEntry> entries) {
+            super(minecraft, width, height, y, itemHeight);
             for (ModEntry entry : entries) {
                 this.addEntry(entry);
             }
@@ -234,7 +225,7 @@ public class GuiBatchExport extends Screen {
     }
 
     @OnlyIn(Dist.CLIENT)
-    private static class ModEntry extends ObjectSelectionList.Entry<ModEntry> {
+    private class ModEntry extends ObjectSelectionList.Entry<ModEntry> {
         private final String modId;
         private final String modName;
         private boolean selected = false;
@@ -260,6 +251,23 @@ public class GuiBatchExport extends Screen {
         @Override
         public Component getNarration() {
             return Component.literal(modName);
+        }
+    }
+
+    private class ZoomSlider extends AbstractSliderButton {
+        public ZoomSlider(int x, int y, int width, int height) {
+            super(x, y, width, height, Component.translatable("gui.wikizoomer.zoom"), GuiBatchExport.this.zoomPercent / 1000.0);
+            this.updateMessage();
+        }
+
+        @Override
+        protected void updateMessage() {
+            this.setMessage(Component.translatable("gui.wikizoomer.zoom").append(": " + (int) GuiBatchExport.this.zoomPercent + "%"));
+        }
+
+        @Override
+        protected void applyValue() {
+            GuiBatchExport.this.zoomPercent = (float) (this.value * 1000.0);
         }
     }
 }

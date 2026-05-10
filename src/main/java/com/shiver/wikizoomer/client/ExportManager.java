@@ -1,6 +1,5 @@
-package com.github.alexthe666.wikizoomer.client;
+package com.shiver.wikizoomer.client;
 
-import com.github.alexthe666.wikizoomer.ClientProxy;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.pipeline.TextureTarget;
 import com.mojang.blaze3d.platform.Lighting;
@@ -8,11 +7,13 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexSorting;
 import com.mojang.math.Axis;
+import com.shiver.wikizoomer.WikiZoomerUnofficialClient;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.resources.model.BakedModel;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
@@ -20,9 +21,8 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.joml.Matrix4f;
@@ -81,11 +81,12 @@ public class ExportManager {
         sendChat(Component.translatable("gui.wikizoomer.batch_started", tasks.size()));
     }
 
-    public static ExportTask createItemTask(ItemStack stack, float zoomPercent, ExportTask.Background background, int exportSize, boolean isBatch, float rotX, float rotY) {
+    public static ExportTask createItemTask(ItemStack stack, float zoomPercent, ExportTask.Background background,
+                                            int exportSize, boolean isBatch, float rotX, float rotY) {
         if (stack == null || stack.isEmpty()) {
             return null;
         }
-        ResourceLocation id = ForgeRegistries.ITEMS.getKey(stack.getItem());
+        ResourceLocation id = BuiltInRegistries.ITEM.getKey(stack.getItem());
         if (id == null) {
             return null;
         }
@@ -93,11 +94,12 @@ public class ExportManager {
         return ExportTask.forItem(stack, output, background, isBatch, zoomPercent, exportSize, rotX, rotY);
     }
 
-    public static ExportTask createEntityTask(Entity entity, float zoomPercent, ExportTask.Background background, int exportSize, boolean isBatch, float rotX, float rotY) {
+    public static ExportTask createEntityTask(Entity entity, float zoomPercent, ExportTask.Background background,
+                                              int exportSize, boolean isBatch, float rotX, float rotY) {
         if (entity == null) {
             return null;
         }
-        ResourceLocation id = ForgeRegistries.ENTITY_TYPES.getKey(entity.getType());
+        ResourceLocation id = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType());
         if (id == null) {
             return null;
         }
@@ -105,7 +107,8 @@ public class ExportManager {
         return ExportTask.forEntity(entity, output, background, isBatch, zoomPercent, exportSize, rotX, rotY);
     }
 
-    public static ExportTask createEntityIdTask(ResourceLocation entityId, float zoomPercent, ExportTask.Background background, int exportSize, boolean isBatch, float rotX, float rotY) {
+    public static ExportTask createEntityIdTask(ResourceLocation entityId, float zoomPercent, ExportTask.Background background,
+                                                int exportSize, boolean isBatch, float rotX, float rotY) {
         if (entityId == null) {
             return null;
         }
@@ -201,8 +204,8 @@ public class ExportManager {
 
         poseStack.pushPose();
         poseStack.translate(0.0F, 0.0F, -2000.0F);
-        poseStack.scale(1.0F, 1.0F, 0.01F);
         if (task.type == ExportTask.Type.ITEM) {
+            poseStack.scale(1.0F, 1.0F, 0.01F);
             renderItemCentered(poseStack, bufferSource, task.itemStack, task.exportSize, task.zoomPercent, task.rotX, task.rotY);
         } else {
             if (entity == null) {
@@ -245,56 +248,49 @@ public class ExportManager {
         if (task.entityId == null) {
             return null;
         }
-        EntityType<?> type = ForgeRegistries.ENTITY_TYPES.getValue(task.entityId);
-        if (type == null) {
-            return null;
-        }
-        if (mc.level == null) {
+        EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.get(task.entityId);
+        if (type == null || mc.level == null) {
             return null;
         }
         return type.create(mc.level);
     }
 
-    private static void renderItemCentered(PoseStack poseStack, MultiBufferSource.BufferSource bufferSource, ItemStack stack, int exportSize, float zoomPercent, float rotX, float rotY) {
+    private static void renderItemCentered(PoseStack poseStack, MultiBufferSource.BufferSource bufferSource,
+                                           ItemStack stack, int exportSize, float zoomPercent, float rotX, float rotY) {
         float scale = zoomPercent * 1.92F;
         poseStack.pushPose();
         poseStack.translate(exportSize / 2.0F, exportSize / 2.0F, 100.0F);
         poseStack.scale(scale, -scale, scale);
-        
         poseStack.mulPose(Axis.XP.rotationDegrees(rotX));
         poseStack.mulPose(Axis.YP.rotationDegrees(rotY));
 
         Minecraft mc = Minecraft.getInstance();
         BakedModel model = mc.getItemRenderer().getModel(stack, mc.level, null, 0);
-        
         if (!model.usesBlockLight()) {
             Lighting.setupForFlatItems();
         } else {
             Lighting.setupFor3DItems();
         }
-
         mc.getItemRenderer().render(stack, ItemDisplayContext.GUI, false, poseStack, bufferSource, 15728880, OverlayTexture.NO_OVERLAY, model);
-
         poseStack.popPose();
     }
 
-    private static void renderEntityCentered(PoseStack poseStack, MultiBufferSource.BufferSource bufferSource, Entity entity, int exportSize, float zoomPercent, float rotX, float rotY) {
+    private static void renderEntityCentered(PoseStack poseStack, MultiBufferSource.BufferSource bufferSource,
+                                             Entity entity, int exportSize, float zoomPercent, float rotX, float rotY) {
         int centerX = exportSize / 2;
         int centerY = (exportSize + (int) ((zoomPercent / 100.0F) * (entity.getBbHeight() * 100.0F))) / 2;
         Entity renderEntity = entity;
         boolean isMimic = false;
-        if (ClientProxy.dataMimic != null && renderEntity.getType() == ClientProxy.dataMimic.getType()) {
-            renderEntity = ClientProxy.dataMimic;
+        if (WikiZoomerUnofficialClient.dataMimic != null && renderEntity.getType() == WikiZoomerUnofficialClient.dataMimic.getType()) {
+            renderEntity = WikiZoomerUnofficialClient.dataMimic;
             isMimic = true;
         }
-        final Entity finalRenderEntity = renderEntity;
 
         poseStack.pushPose();
         poseStack.translate(centerX, centerY, 10.0F);
         poseStack.scale(zoomPercent, zoomPercent, zoomPercent);
         poseStack.mulPose(Axis.ZP.rotationDegrees(180.0F));
-        
-        float halfHeight = finalRenderEntity.getBbHeight() / 2.0F;
+        float halfHeight = renderEntity.getBbHeight() / 2.0F;
         poseStack.translate(0.0F, halfHeight, 0.0F);
         poseStack.mulPose(Axis.XP.rotationDegrees(rotX));
         poseStack.mulPose(Axis.YP.rotationDegrees(rotY));
@@ -308,23 +304,21 @@ public class ExportManager {
         entityRenderDispatcher.setRenderShadow(false);
 
         if (!isMimic) {
-            if (finalRenderEntity instanceof LivingEntity livingEntity) {
+            if (renderEntity instanceof LivingEntity livingEntity) {
                 livingEntity.yBodyRot = 0.0F;
                 livingEntity.yHeadRotO = 0.0F;
                 livingEntity.yHeadRot = 0.0F;
             }
-            finalRenderEntity.setYRot(0.0F);
-            finalRenderEntity.setXRot(0.0F);
-            finalRenderEntity.setOldPosAndRot();
+            renderEntity.setYRot(0.0F);
+            renderEntity.setXRot(0.0F);
+            renderEntity.setOldPosAndRot();
         }
 
-        Vector3f light0 = new Vector3f(-0.2F, 0.0F, 1.0F);
-        light0.normalize();
-        Vector3f light1 = new Vector3f(-0.2F, -1.0F, 0.0F);
-        light1.normalize();
+        Vector3f light0 = new Vector3f(-0.2F, 0.0F, 1.0F).normalize();
+        Vector3f light1 = new Vector3f(-0.2F, -1.0F, 0.0F).normalize();
         RenderSystem.setShaderLights(light0, light1);
 
-        entityRenderDispatcher.render(finalRenderEntity, 0.0D, 0.0D, 0.0D, 0.0F, mc.getFrameTime(), poseStack, bufferSource, 15728880);
+        entityRenderDispatcher.render(renderEntity, 0.0D, 0.0D, 0.0D, 0.0F, mc.getTimer().getGameTimeDeltaPartialTick(true), poseStack, bufferSource, 15728880);
         entityRenderDispatcher.setRenderShadow(true);
         Lighting.setupFor3DItems();
         poseStack.popPose();

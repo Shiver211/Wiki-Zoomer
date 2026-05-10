@@ -7,7 +7,7 @@
   ],
   "key": {
     "D": {
-      "tag": "forge:gems/diamond"
+      "tag": "c:gems/diamond"
     },
     "S": {
       "item": "minecraft:smooth_stone"
@@ -17,6 +17,6 @@
     }
   },
   "result": {
-    "item": "wikizoomer:item_zoomer"
+    "id": "wikizoomer:item_zoomer"
   }
 }

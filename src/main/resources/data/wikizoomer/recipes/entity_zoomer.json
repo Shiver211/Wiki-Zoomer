@@ -7,7 +7,7 @@
   ],
   "key": {
     "D": {
-      "tag": "forge:gems/emerald"
+      "tag": "c:gems/emerald"
     },
     "S": {
       "item": "minecraft:smooth_stone"
@@ -17,6 +17,6 @@
     }
   },
   "result": {
-    "item": "wikizoomer:entity_zoomer"
+    "id": "wikizoomer:entity_zoomer"
   }
 }

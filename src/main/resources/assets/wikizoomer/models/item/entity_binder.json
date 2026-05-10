@@ -3,12 +3,23 @@
   "textures": {
     "layer0": "wikizoomer:item/entity_binder"
   },
-  "overrides": [
+  "model_selects": [
     {
-      "predicate": {
-        "bound": 1
-      },
-      "model": "wikizoomer:item/entity_binder_bound"
+      "property": "minecraft:component",
+      "component": "wikizoomer:entity_tag",
+      "cases": [
+        {
+          "when": {
+            "type": "has_component"
+          },
+          "model": {
+            "parent": "item/generated",
+            "textures": {
+              "layer0": "wikizoomer:item/entity_binder_bound"
+            }
+          }
+        }
+      ]
     }
-    ]
+  ]
 }

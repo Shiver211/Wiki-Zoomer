@@ -7,13 +7,13 @@
   ],
   "key": {
     "S": {
-      "tag": "forge:rods/wooden"
+      "tag": "c:rods/wooden"
     },
     "B": {
       "item": "wikizoomer:entity_binder"
     }
   },
   "result": {
-    "item": "wikizoomer:data_copier"
+    "id": "wikizoomer:data_copier"
   }
 }
