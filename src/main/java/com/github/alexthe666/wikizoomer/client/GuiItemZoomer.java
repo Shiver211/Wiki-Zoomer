@@ -186,7 +186,7 @@ public class GuiItemZoomer extends Screen {
             return true;
         }
         if (button == 0) {
-            rotY -= (float) dragX;
+            rotY += (float) dragX;
             rotX -= (float) dragY;
             return true;
         }

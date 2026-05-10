@@ -245,7 +245,7 @@ public class GuiEntityZoomer extends Screen {
         }
         if (button == 0) {
             rotY -= (float) dragX;
-            rotX -= (float) dragY;
+            rotX += (float) dragY;
             return true;
         }
         return false;
