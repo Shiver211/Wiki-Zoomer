@@ -6,6 +6,7 @@ import net.minecraft.client.gui.GuiListExtended;
 import net.minecraft.client.gui.GuiPageButtonList;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.resources.I18n;
+import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.init.Items;
@@ -17,6 +18,8 @@ import net.minecraftforge.fml.common.registry.EntityEntry;
 import net.minecraftforge.fml.common.registry.ForgeRegistries;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
+
+import com.github.alexthe666.wikizoomer.ModConfig;
 
 import java.io.IOException;
 import java.lang.reflect.Modifier;
@@ -200,6 +203,9 @@ public class GuiBatchExport extends GuiScreen {
                     continue;
                 }
                 if (entry.getEntityClass() == null || Modifier.isAbstract(entry.getEntityClass().getModifiers())) {
+                    continue;
+                }
+                if (ModConfig.onlyLivingEntities && !EntityLivingBase.class.isAssignableFrom(entry.getEntityClass())) {
                     continue;
                 }
                 ExportTask task = ExportManager.createEntityIdTask(id, zoom, background, exportSize, true);
