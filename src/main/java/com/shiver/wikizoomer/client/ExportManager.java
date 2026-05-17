@@ -47,6 +47,8 @@ public class ExportManager {
     private static final int DEFAULT_EXPORT_SIZE = 512;
     private static final float DEFAULT_ZOOM = 100F;
     private static final Queue<ExportTask> QUEUE = new ArrayDeque<>();
+    private static final ExportSettings LAST_ITEM_SETTINGS = new ExportSettings(DEFAULT_ZOOM, ExportTask.Background.GREENSCREEN, DEFAULT_EXPORT_SIZE, 0.0F, 0.0F, 0.0F, 0.0F);
+    private static final ExportSettings LAST_ENTITY_SETTINGS = new ExportSettings(DEFAULT_ZOOM, ExportTask.Background.GREENSCREEN, DEFAULT_EXPORT_SIZE, 30.0F, 45.0F, 0.0F, 0.0F);
     private static RenderTarget renderTarget;
     private static int renderTargetSize = -1;
     private static boolean renderQueued = false;
@@ -64,6 +66,31 @@ public class ExportManager {
 
     public static float getDefaultZoom() {
         return DEFAULT_ZOOM;
+    }
+
+    public static ExportSettings getLastItemSettings() {
+        return LAST_ITEM_SETTINGS.copy();
+    }
+
+    public static ExportSettings getLastEntitySettings() {
+        return LAST_ENTITY_SETTINGS.copy();
+    }
+
+    public static void rememberItemSettings(float zoomPercent, ExportTask.Background background, int exportSize, float rotX, float rotY) {
+        LAST_ITEM_SETTINGS.set(zoomPercent, background, exportSize, rotX, rotY, 0.0F, 0.0F);
+    }
+
+    public static void rememberEntitySettings(float zoomPercent, ExportTask.Background background, int exportSize,
+                                                float rotX, float rotY, float offsetX, float offsetY) {
+        LAST_ENTITY_SETTINGS.set(zoomPercent, background, exportSize, rotX, rotY, offsetX, offsetY);
+    }
+
+    public static void resetItemSettings() {
+        LAST_ITEM_SETTINGS.set(DEFAULT_ZOOM, ExportTask.Background.GREENSCREEN, DEFAULT_EXPORT_SIZE, 0.0F, 0.0F, 0.0F, 0.0F);
+    }
+
+    public static void resetEntitySettings() {
+        LAST_ENTITY_SETTINGS.set(DEFAULT_ZOOM, ExportTask.Background.GREENSCREEN, DEFAULT_EXPORT_SIZE, 30.0F, 45.0F, 0.0F, 0.0F);
     }
 
     public static void enqueue(ExportTask task) {
@@ -95,7 +122,7 @@ public class ExportManager {
     }
 
     public static ExportTask createEntityTask(Entity entity, float zoomPercent, ExportTask.Background background,
-                                                int exportSize, boolean isBatch, float rotX, float rotY) {
+                                                int exportSize, boolean isBatch, float rotX, float rotY, float offsetX, float offsetY) {
         if (entity == null) {
             return null;
         }
@@ -104,16 +131,16 @@ public class ExportManager {
             return null;
         }
         File output = getOutputFile(id);
-        return ExportTask.forEntity(entity, output, background, isBatch, zoomPercent, exportSize, rotX, rotY);
+        return ExportTask.forEntity(entity, output, background, isBatch, zoomPercent, exportSize, rotX, rotY, offsetX, offsetY);
     }
 
     public static ExportTask createEntityIdTask(ResourceLocation entityId, float zoomPercent, ExportTask.Background background,
-                                                int exportSize, boolean isBatch, float rotX, float rotY) {
+                                                int exportSize, boolean isBatch, float rotX, float rotY, float offsetX, float offsetY) {
         if (entityId == null) {
             return null;
         }
         File output = getOutputFile(entityId);
-        return ExportTask.forEntityId(entityId, output, background, isBatch, zoomPercent, exportSize, rotX, rotY);
+        return ExportTask.forEntityId(entityId, output, background, isBatch, zoomPercent, exportSize, rotX, rotY, offsetX, offsetY);
     }
 
     public static void tick() {
@@ -211,7 +238,7 @@ public class ExportManager {
             if (entity == null) {
                 return false;
             }
-            renderEntityCentered(poseStack, bufferSource, entity, task.exportSize, task.zoomPercent, task.rotX, task.rotY);
+            renderEntityCentered(poseStack, bufferSource, entity, task.exportSize, task.zoomPercent, task.rotX, task.rotY, task.offsetX, task.offsetY);
         }
         bufferSource.endBatch();
         poseStack.popPose();
@@ -276,9 +303,10 @@ public class ExportManager {
     }
 
     private static void renderEntityCentered(PoseStack poseStack, MultiBufferSource.BufferSource bufferSource,
-                                                Entity entity, int exportSize, float zoomPercent, float rotX, float rotY) {
-        int centerX = exportSize / 2;
-        int centerY = (exportSize + (int) ((zoomPercent / 100.0F) * (entity.getBbHeight() * 100.0F))) / 2;
+                                                Entity entity, int exportSize, float zoomPercent, float rotX, float rotY,
+                                                float offsetX, float offsetY) {
+        float centerX = exportSize / 2.0F + offsetX;
+        float centerY = (exportSize + ((zoomPercent / 100.0F) * (entity.getBbHeight() * 100.0F))) / 2.0F + offsetY;
         Entity renderEntity = entity;
         boolean isMimic = false;
         if (WikiZoomerUnofficialClient.dataMimic != null && renderEntity.getType() == WikiZoomerUnofficialClient.dataMimic.getType()) {
@@ -355,6 +383,36 @@ public class ExportManager {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player != null) {
             mc.player.sendSystemMessage(message);
+        }
+    }
+
+    public static class ExportSettings {
+        public float zoomPercent;
+        public ExportTask.Background background;
+        public int exportSize;
+        public float rotX;
+        public float rotY;
+        public float offsetX;
+        public float offsetY;
+
+        private ExportSettings(float zoomPercent, ExportTask.Background background, int exportSize,
+                                float rotX, float rotY, float offsetX, float offsetY) {
+            set(zoomPercent, background, exportSize, rotX, rotY, offsetX, offsetY);
+        }
+
+        private void set(float zoomPercent, ExportTask.Background background, int exportSize,
+                            float rotX, float rotY, float offsetX, float offsetY) {
+            this.zoomPercent = zoomPercent;
+            this.background = background;
+            this.exportSize = exportSize;
+            this.rotX = rotX;
+            this.rotY = rotY;
+            this.offsetX = offsetX;
+            this.offsetY = offsetY;
+        }
+
+        private ExportSettings copy() {
+            return new ExportSettings(zoomPercent, background, exportSize, rotX, rotY, offsetX, offsetY);
         }
     }
 }

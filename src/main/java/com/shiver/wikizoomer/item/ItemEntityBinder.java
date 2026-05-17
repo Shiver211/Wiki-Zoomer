@@ -14,7 +14,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
-import net.minecraft.world.level.Level;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 import java.util.Optional;
@@ -63,7 +63,8 @@ public class ItemEntityBinder extends Item {
     }
 
     @Override
-    public InteractionResult interactLivingEntity(ItemStack stack, Player player, LivingEntity target, InteractionHand hand) {
+    @NotNull
+    public InteractionResult interactLivingEntity(@NotNull ItemStack stack, Player player, LivingEntity target, @NotNull InteractionHand hand) {
         CompoundTag entityTag = target.saveWithoutId(new CompoundTag());
         entityTag.putString("id", BuiltInRegistries.ENTITY_TYPE.getKey(target.getType()).toString());
 

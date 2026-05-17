@@ -36,9 +36,13 @@ public class GuiBatchExport extends Screen {
     private int exportSizeIndex = findDefaultExportSizeIndex();
     private static final int[] EXPORT_SIZES = ExportManager.getExportSizes();
     private float zoomPercent = ExportManager.getDefaultZoom();
+    private boolean visibleSettingsForEntities = false;
+    private boolean zoomManuallyAdjusted = false;
+    private boolean backgroundManuallyAdjusted = false;
 
     public GuiBatchExport() {
         super(Component.translatable("gui.wikizoomer.batch_title"));
+        loadVisibleSettings(ExportManager.getLastItemSettings(), false);
     }
 
     @Override
@@ -67,17 +71,20 @@ public class GuiBatchExport extends Screen {
         this.addRenderableWidget(Button.builder(
                 Component.translatable("gui.wikizoomer.batch_items", exportItems ? "ON" : "OFF"), (button) -> {
                     exportItems = !exportItems;
+                    updateVisibleSettingsSource();
                     init();
                 }).size(buttonWidth, buttonHeight).pos(col1X, row1Y).build());
 
         this.addRenderableWidget(Button.builder(
                 Component.translatable("gui.wikizoomer.batch_entities", exportEntities ? "ON" : "OFF"), (button) -> {
                     exportEntities = !exportEntities;
+                    updateVisibleSettingsSource();
                     init();
                 }).size(buttonWidth, buttonHeight).pos(col2X, row1Y).build());
 
         this.addRenderableWidget(Button.builder(
-                Component.translatable("gui.wikizoomer.background", getBackgroundLabel()), (button) -> {
+                getBackgroundButtonLabel(), (button) -> {
+                    backgroundManuallyAdjusted = true;
                     background = background == ExportTask.Background.GREENSCREEN
                             ? ExportTask.Background.TRANSPARENT : ExportTask.Background.GREENSCREEN;
                     init();
@@ -129,14 +136,24 @@ public class GuiBatchExport extends Screen {
             sendChat(Component.translatable("gui.wikizoomer.batch_no_mods"));
             return;
         }
+        if (visibleSettingsForEntities) {
+            ExportManager.ExportSettings latestEntitySettings = ExportManager.getLastEntitySettings();
+            ExportManager.rememberEntitySettings(zoomPercent, background, getExportSize(),
+                    latestEntitySettings.rotX, latestEntitySettings.rotY, latestEntitySettings.offsetX, latestEntitySettings.offsetY);
+        } else {
+            ExportManager.ExportSettings latestItemSettings = ExportManager.getLastItemSettings();
+            ExportManager.rememberItemSettings(zoomPercent, background, getExportSize(), latestItemSettings.rotX, latestItemSettings.rotY);
+        }
+        ExportManager.ExportSettings itemSettings = ExportManager.getLastItemSettings();
+        ExportManager.ExportSettings entitySettings = ExportManager.getLastEntitySettings();
         List<ExportTask> tasks = new ArrayList<>();
-        int exportSize = getExportSize();
         if (exportItems) {
             for (Item item : BuiltInRegistries.ITEM) {
                 if (item == Items.AIR) continue;
                 ResourceLocation id = BuiltInRegistries.ITEM.getKey(item);
                 if (id == null || !modIds.contains(id.getNamespace())) continue;
-                ExportTask task = ExportManager.createItemTask(new ItemStack(item), zoomPercent, background, exportSize, true, 0.0F, 0.0F);
+                ExportTask task = ExportManager.createItemTask(new ItemStack(item), itemSettings.zoomPercent, itemSettings.background,
+                        itemSettings.exportSize, true, itemSettings.rotX, itemSettings.rotY);
                 if (task != null) tasks.add(task);
             }
         }
@@ -144,7 +161,9 @@ public class GuiBatchExport extends Screen {
             for (EntityType<?> entityType : BuiltInRegistries.ENTITY_TYPE) {
                 ResourceLocation id = BuiltInRegistries.ENTITY_TYPE.getKey(entityType);
                 if (id == null || !modIds.contains(id.getNamespace())) continue;
-                ExportTask task = ExportManager.createEntityIdTask(id, zoomPercent, background, exportSize, true, 30.0F, 45.0F);
+                ExportTask task = ExportManager.createEntityIdTask(id, entitySettings.zoomPercent, entitySettings.background,
+                        entitySettings.exportSize, true, entitySettings.rotX, entitySettings.rotY,
+                        entitySettings.offsetX, entitySettings.offsetY);
                 if (task != null) tasks.add(task);
             }
         }
@@ -188,10 +207,31 @@ public class GuiBatchExport extends Screen {
 
     private static int findDefaultExportSizeIndex() {
         int defaultSize = ExportManager.getDefaultExportSize();
+        return findExportSizeIndex(defaultSize);
+    }
+
+    private static int findExportSizeIndex(int exportSize) {
         for (int i = 0; i < EXPORT_SIZES.length; i++) {
-            if (EXPORT_SIZES[i] == defaultSize) return i;
+            if (EXPORT_SIZES[i] == exportSize) return i;
         }
         return EXPORT_SIZES.length - 1;
+    }
+
+    private void updateVisibleSettingsSource() {
+        if (exportItems) {
+            loadVisibleSettings(ExportManager.getLastItemSettings(), false);
+        } else if (exportEntities) {
+            loadVisibleSettings(ExportManager.getLastEntitySettings(), true);
+        }
+    }
+
+    private void loadVisibleSettings(ExportManager.ExportSettings settings, boolean forEntities) {
+        this.zoomPercent = settings.zoomPercent;
+        this.background = settings.background;
+        this.exportSizeIndex = findExportSizeIndex(settings.exportSize);
+        this.visibleSettingsForEntities = forEntities;
+        this.zoomManuallyAdjusted = false;
+        this.backgroundManuallyAdjusted = false;
     }
 
     private int getExportSize() {
@@ -202,6 +242,11 @@ public class GuiBatchExport extends Screen {
         return background == ExportTask.Background.GREENSCREEN
                 ? Component.translatable("gui.wikizoomer.background.greenscreen")
                 : Component.translatable("gui.wikizoomer.background.transparent");
+    }
+
+    private Component getBackgroundButtonLabel() {
+        return Component.translatable("gui.wikizoomer.background",
+                backgroundManuallyAdjusted ? getBackgroundLabel() : Component.translatable("gui.wikizoomer.configured"));
     }
 
     @OnlyIn(Dist.CLIENT)
@@ -262,11 +307,16 @@ public class GuiBatchExport extends Screen {
 
         @Override
         protected void updateMessage() {
-            this.setMessage(Component.translatable("gui.wikizoomer.zoom").append(": " + (int) GuiBatchExport.this.zoomPercent + "%"));
+            if (GuiBatchExport.this.zoomManuallyAdjusted) {
+                this.setMessage(Component.translatable("gui.wikizoomer.zoom").append(": " + (int) GuiBatchExport.this.zoomPercent + "%"));
+            } else {
+                this.setMessage(Component.translatable("gui.wikizoomer.zoom").append(": ").append(Component.translatable("gui.wikizoomer.configured")));
+            }
         }
 
         @Override
         protected void applyValue() {
+            GuiBatchExport.this.zoomManuallyAdjusted = true;
             GuiBatchExport.this.zoomPercent = (float) (this.value * 1000.0);
         }
     }

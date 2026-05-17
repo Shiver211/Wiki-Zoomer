@@ -27,6 +27,7 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
+import org.lwjgl.glfw.GLFW;
 
 import java.lang.reflect.Field;
 
@@ -41,10 +42,22 @@ public class GuiEntityZoomer extends Screen {
     private float rotX = 30F;
     private float rotY = 45F;
     private ZoomSlider zoomSlider;
+    private float offsetX = 0.0F;
+    private float offsetY = 0.0F;
+    private static final int FRAME_COLOR = 0xFFFF0000;
 
     public GuiEntityZoomer(TileEntityEntityZoomer zoomerBase) {
         super(Component.translatable("entity_zoomer"));
         this.zoomerBase = zoomerBase;
+        ExportManager.ExportSettings settings = ExportManager.getLastEntitySettings();
+        this.background = settings.background;
+        this.sliderValue = settings.zoomPercent;
+        this.prevSliderValue = this.sliderValue;
+        this.exportSizeIndex = findExportSizeIndex(settings.exportSize);
+        this.rotX = settings.rotX;
+        this.rotY = settings.rotY;
+        this.offsetX = settings.offsetX;
+        this.offsetY = settings.offsetY;
     }
 
     private void setSliderValue(float value) {
@@ -68,6 +81,7 @@ public class GuiEntityZoomer extends Screen {
         int col3X = startX + (buttonWidth + spacing) * 2;
         int row1Y = j + 180;
         int row2Y = row1Y + 22;
+        int row3Y = row2Y + 22;
 
         this.zoomSlider = new ZoomSlider(col1X, row1Y, buttonWidth, buttonHeight);
         this.addRenderableWidget(this.zoomSlider);
@@ -82,7 +96,8 @@ public class GuiEntityZoomer extends Screen {
         this.addRenderableWidget(Button.builder(
                 Component.translatable("gui.wikizoomer.export_png"), (button) -> {
                     Entity renderEntity = zoomerBase.getCachedEntity();
-                    ExportTask task = ExportManager.createEntityTask(renderEntity, sliderValue, background, getExportSize(), false, rotX, rotY);
+                    ExportManager.rememberEntitySettings(sliderValue, background, getExportSize(), rotX, rotY, offsetX, offsetY);
+                    ExportTask task = ExportManager.createEntityTask(renderEntity, sliderValue, background, getExportSize(), false, rotX, rotY, offsetX, offsetY);
                     if (task == null) {
                         if (Minecraft.getInstance().player != null) {
                             Minecraft.getInstance().player.sendSystemMessage(Component.translatable("gui.wikizoomer.export_no_entity"));
@@ -100,8 +115,15 @@ public class GuiEntityZoomer extends Screen {
 
         this.addRenderableWidget(Button.builder(
                 Component.translatable("gui.wikizoomer.batch_export"), (button) -> {
+                    ExportManager.rememberEntitySettings(sliderValue, background, getExportSize(), rotX, rotY, offsetX, offsetY);
                     Minecraft.getInstance().setScreen(new GuiBatchExport());
                 }).size(buttonWidth, buttonHeight).pos(col2X, row2Y).build());
+
+        this.addRenderableWidget(Button.builder(
+                Component.translatable("gui.wikizoomer.clear_config"), (button) -> {
+                    resetSettings();
+                    init();
+                }).size(buttonWidth, buttonHeight).pos(col2X, row3Y).build());
 
         this.addRenderableWidget(Button.builder(
                 Component.translatable("gui.wikizoomer.close"), (button) -> {
@@ -128,10 +150,29 @@ public class GuiEntityZoomer extends Screen {
             }
         }
         renderFocus(guiGraphics);
+        renderCropFrame(guiGraphics);
         guiGraphics.pose().pushPose();
         guiGraphics.pose().translate(0, 0, 5000F);
         super.render(guiGraphics, mouseX, mouseY, partialTicks);
         guiGraphics.pose().popPose();
+    }
+
+    private void renderCropFrame(GuiGraphics guiGraphics) {
+        int size = getPreviewSize();
+        int left = (this.width - size) / 2;
+        int top = getPreviewTop(size);
+        guiGraphics.fill(left, top, left + size, top + 2, FRAME_COLOR);
+        guiGraphics.fill(left, top + size - 2, left + size, top + size, FRAME_COLOR);
+        guiGraphics.fill(left, top, left + 2, top + size, FRAME_COLOR);
+        guiGraphics.fill(left + size - 2, top, left + size, top + size, FRAME_COLOR);
+    }
+
+    private int getPreviewSize() {
+        return Math.max(64, Math.min(Math.min(this.width - 40, this.height - 130), 512));
+    }
+
+    private int getPreviewTop(int previewSize) {
+        return Math.max(8, (this.height - previewSize) / 2);
     }
 
     private void renderFocus(GuiGraphics guiGraphics) {
@@ -153,12 +194,34 @@ public class GuiEntityZoomer extends Screen {
                 }
             }
             if (renderEntity instanceof LivingEntity) {
-                guiGraphics.pose().translate(i, j, 10F);
-                drawEntityOnScreen(guiGraphics, 100, 0, scale, false, rotX, rotY, 0, 0, 0, renderEntity, isMimic);
+                int previewSize = getPreviewSize();
+                float previewScale = previewSize / (float) getExportSize();
+                int frameLeft = (this.width - previewSize) / 2;
+                int frameTop = getPreviewTop(previewSize);
+                float centerX = frameLeft + previewSize / 2.0F + offsetX * previewScale;
+                float centerY = frameTop + (previewSize + ((scale / 100F) * (renderEntity.getBbHeight() * 100F) * previewScale)) / 2.0F + offsetY * previewScale;
+                guiGraphics.pose().translate(centerX, centerY, 10F);
+                drawEntityOnScreen(guiGraphics, 0, 0, scale * previewScale, false, rotX, rotY, 0, 0, 0, renderEntity, isMimic);
             }
         }
         guiGraphics.pose().popPose();
         prevSliderValue = sliderValue;
+    }
+
+    private void resetSettings() {
+        ExportManager.resetEntitySettings();
+        ExportManager.ExportSettings settings = ExportManager.getLastEntitySettings();
+        this.background = settings.background;
+        this.sliderValue = settings.zoomPercent;
+        this.prevSliderValue = this.sliderValue;
+        this.exportSizeIndex = findExportSizeIndex(settings.exportSize);
+        this.rotX = settings.rotX;
+        this.rotY = settings.rotY;
+        this.offsetX = settings.offsetX;
+        this.offsetY = settings.offsetY;
+        if (zoomSlider != null) {
+            zoomSlider.updateValue(this.sliderValue);
+        }
     }
 
     public static void drawEntityOnScreen(GuiGraphics guiGraphics, int posX, int posY, float scale, boolean follow,
@@ -247,8 +310,12 @@ public class GuiEntityZoomer extends Screen {
 
     private static int findDefaultExportSizeIndex() {
         int defaultSize = ExportManager.getDefaultExportSize();
+        return findExportSizeIndex(defaultSize);
+    }
+
+    private static int findExportSizeIndex(int exportSize) {
         for (int i = 0; i < EXPORT_SIZES.length; i++) {
-            if (EXPORT_SIZES[i] == defaultSize) {
+            if (EXPORT_SIZES[i] == exportSize) {
                 return i;
             }
         }
@@ -289,6 +356,31 @@ public class GuiEntityZoomer extends Screen {
             zoomSlider.updateValue(this.sliderValue);
         }
         return true;
+    }
+
+    @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (super.keyPressed(keyCode, scanCode, modifiers)) {
+            return true;
+        }
+        float step = Screen.hasShiftDown() ? 1.0F : 5.0F;
+        if (keyCode == GLFW.GLFW_KEY_A) {
+            offsetX -= step;
+            return true;
+        }
+        if (keyCode == GLFW.GLFW_KEY_D) {
+            offsetX += step;
+            return true;
+        }
+        if (keyCode == GLFW.GLFW_KEY_W) {
+            offsetY -= step;
+            return true;
+        }
+        if (keyCode == GLFW.GLFW_KEY_S) {
+            offsetY += step;
+            return true;
+        }
+        return false;
     }
 
     private class ZoomSlider extends AbstractSliderButton {
