@@ -244,6 +244,16 @@ public class GuiItemZoomer extends Screen {
         }
     }
 
+    private void rememberCurrentSettings() {
+        ExportManager.rememberItemSettings(sliderValue, background, getExportSize(), rotX, rotY);
+    }
+
+    @Override
+    public void removed() {
+        rememberCurrentSettings();
+        super.removed();
+    }
+
     @Override
     public boolean isPauseScreen() {
         return false;

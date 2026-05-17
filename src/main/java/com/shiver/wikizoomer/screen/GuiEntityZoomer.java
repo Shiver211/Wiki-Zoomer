@@ -224,6 +224,16 @@ public class GuiEntityZoomer extends Screen {
         }
     }
 
+    private void rememberCurrentSettings() {
+        ExportManager.rememberEntitySettings(sliderValue, background, getExportSize(), rotX, rotY, offsetX, offsetY);
+    }
+
+    @Override
+    public void removed() {
+        rememberCurrentSettings();
+        super.removed();
+    }
+
     public static void drawEntityOnScreen(GuiGraphics guiGraphics, int posX, int posY, float scale, boolean follow,
                                           double xRot, double yRot, double zRot, float mouseX, float mouseY,
                                           Entity entity, boolean isMimic) {
