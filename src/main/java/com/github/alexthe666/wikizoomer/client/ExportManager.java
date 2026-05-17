@@ -93,7 +93,7 @@ public class ExportManager {
         return ExportTask.forItem(stack, output, background, isBatch, zoomPercent, exportSize, rotX, rotY);
     }
 
-    public static ExportTask createEntityTask(Entity entity, float zoomPercent, ExportTask.Background background, int exportSize, boolean isBatch, float rotX, float rotY) {
+    public static ExportTask createEntityTask(Entity entity, float zoomPercent, ExportTask.Background background, int exportSize, boolean isBatch, float rotX, float rotY, float offsetX, float offsetY) {
         if (entity == null) {
             return null;
         }
@@ -102,15 +102,15 @@ public class ExportManager {
             return null;
         }
         File output = getOutputFile(id);
-        return ExportTask.forEntity(entity, output, background, isBatch, zoomPercent, exportSize, rotX, rotY);
+        return ExportTask.forEntity(entity, output, background, isBatch, zoomPercent, exportSize, rotX, rotY, offsetX, offsetY);
     }
 
-    public static ExportTask createEntityIdTask(ResourceLocation entityId, float zoomPercent, ExportTask.Background background, int exportSize, boolean isBatch, float rotX, float rotY) {
+    public static ExportTask createEntityIdTask(ResourceLocation entityId, float zoomPercent, ExportTask.Background background, int exportSize, boolean isBatch, float rotX, float rotY, float offsetX, float offsetY) {
         if (entityId == null) {
             return null;
         }
         File output = getOutputFile(entityId);
-        return ExportTask.forEntityId(entityId, output, background, isBatch, zoomPercent, exportSize, rotX, rotY);
+        return ExportTask.forEntityId(entityId, output, background, isBatch, zoomPercent, exportSize, rotX, rotY, offsetX, offsetY);
     }
 
     public static void tick() {
@@ -208,7 +208,7 @@ public class ExportManager {
             if (entity == null) {
                 return false;
             }
-            renderEntityCentered(poseStack, bufferSource, entity, task.exportSize, task.zoomPercent, task.rotX, task.rotY);
+            renderEntityCentered(poseStack, bufferSource, entity, task.exportSize, task.zoomPercent, task.rotX, task.rotY, task.offsetX, task.offsetY);
         }
         bufferSource.endBatch();
         poseStack.popPose();
@@ -278,9 +278,9 @@ public class ExportManager {
         poseStack.popPose();
     }
 
-    private static void renderEntityCentered(PoseStack poseStack, MultiBufferSource.BufferSource bufferSource, Entity entity, int exportSize, float zoomPercent, float rotX, float rotY) {
-        int centerX = exportSize / 2;
-        int centerY = (exportSize + (int) ((zoomPercent / 100.0F) * (entity.getBbHeight() * 100.0F))) / 2;
+    private static void renderEntityCentered(PoseStack poseStack, MultiBufferSource.BufferSource bufferSource, Entity entity, int exportSize, float zoomPercent, float rotX, float rotY, float offsetX, float offsetY) {
+        float centerX = exportSize / 2.0F + offsetX;
+        float centerY = (exportSize + (int) ((zoomPercent / 100.0F) * (entity.getBbHeight() * 100.0F))) / 2.0F + offsetY;
         Entity renderEntity = entity;
         boolean isMimic = false;
         if (ClientProxy.dataMimic != null && renderEntity.getType() == ClientProxy.dataMimic.getType()) {

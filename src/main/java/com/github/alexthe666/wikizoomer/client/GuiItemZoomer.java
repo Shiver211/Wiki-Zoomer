@@ -1,16 +1,11 @@
 package com.github.alexthe666.wikizoomer.client;
 
 import com.github.alexthe666.wikizoomer.tileentity.TileEntityZoomerBase;
-import com.github.alexthe666.wikizoomer.client.ExportManager;
-import com.github.alexthe666.wikizoomer.client.ExportTask;
-import com.github.alexthe666.wikizoomer.client.GuiBatchExport;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.*;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.renderer.GameRenderer;
 import com.mojang.math.Axis;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
@@ -21,13 +16,14 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.client.gui.widget.ForgeSlider;
-
-import java.awt.*;
+import org.lwjgl.opengl.GL11;
 
 @OnlyIn(Dist.CLIENT)
 public class GuiItemZoomer extends Screen {
 
     public static final ResourceLocation GREENSCREEN = Objects.requireNonNull(ResourceLocation.tryParse("wikizoomer:textures/gui/greenscreen.png"), "wikizoomer:textures/gui/greenscreen.png");
+    private static final int CROP_FRAME_SIZE = 192;
+    private static final int CROP_FRAME_COLOR = 0xFFFF0000;
     private final TileEntityZoomerBase zoomerBase;
     private ExportTask.Background background = ExportTask.Background.GREENSCREEN;
     private float sliderValue = 100;
@@ -41,7 +37,7 @@ public class GuiItemZoomer extends Screen {
     public GuiItemZoomer(TileEntityZoomerBase zoomerBase) {
         super(Component.translatable("item_zoomer"));
         this.zoomerBase = zoomerBase;
-        this.init();
+        applyConfig(ZoomerSessionConfig.getItemConfig());
     }
 
     private void setSliderValue(int i, float sliderValue) {
@@ -58,6 +54,7 @@ public class GuiItemZoomer extends Screen {
         MutableComponent backgroundLabel = Component.translatable("gui.wikizoomer.background", getBackgroundLabel());
         MutableComponent export = Component.translatable("gui.wikizoomer.export_png");
         MutableComponent batchExport = Component.translatable("gui.wikizoomer.batch_export");
+        MutableComponent clearConfig = Component.translatable("gui.wikizoomer.clear_config");
         MutableComponent resolutionLabel = Component.translatable("gui.wikizoomer.resolution", getExportSize(), getExportSize());
         int buttonWidth = 120;
         int buttonHeight = 20;
@@ -69,6 +66,7 @@ public class GuiItemZoomer extends Screen {
         int col3X = startX + (buttonWidth + spacing) * 2;
         int row1Y = j + 180;
         int row2Y = row1Y + 22;
+        int row3Y = row2Y + 22;
         this.zoomSlider = new ForgeSlider(col1X, row1Y, buttonWidth, buttonHeight, Component.translatable("gui.wikizoomer.zoom"), Component.literal("%"), 1, 1000, sliderValue, 1, 1, true) {
             @Override
             protected void applyValue() {
@@ -83,6 +81,7 @@ public class GuiItemZoomer extends Screen {
             init();
         }).size(buttonWidth, buttonHeight).pos(col2X, row1Y).build());
         this.addRenderableWidget(Button.builder(export, (button) -> {
+            saveCurrentConfig();
             ExportTask task = ExportManager.createItemTask(zoomerBase.getItem(0), sliderValue, background, getExportSize(), false, rotX, rotY);
             if (task == null) {
                 if (Minecraft.getInstance().player != null) {
@@ -97,11 +96,17 @@ public class GuiItemZoomer extends Screen {
             init();
         }).size(buttonWidth, buttonHeight).pos(col1X, row2Y).build());
         this.addRenderableWidget(Button.builder(batchExport, (button) -> {
+            saveCurrentConfig();
             Minecraft.getInstance().setScreen(new GuiBatchExport());
         }).size(buttonWidth, buttonHeight).pos(col2X, row2Y).build());
         this.addRenderableWidget(Button.builder(exit, (button) -> {
+            saveCurrentConfig();
             Minecraft.getInstance().setScreen(null);
         }).size(buttonWidth, buttonHeight).pos(col3X, row2Y).build());
+        this.addRenderableWidget(Button.builder(clearConfig, (button) -> {
+            applyConfig(ZoomerSessionConfig.resetItem());
+            init();
+        }).size(buttonWidth, buttonHeight).pos(col2X, row3Y).build());
     }
 
     public void renderGreenscreen(GuiGraphics guiGraphics) {
@@ -120,14 +125,17 @@ public class GuiItemZoomer extends Screen {
             } catch (Exception e) {
 
             }
+            clearPreviewDepth();
             renderFocus(guiGraphics);
+            renderCropFrame(guiGraphics);
             guiGraphics.pose().pushPose();
             guiGraphics.pose().translate(0, 0, 5000F);
             super.render(guiGraphics, mouseX, mouseY, partialTicks);
             guiGraphics.pose().popPose();
-            int i = (this.width - 248) / 2 + 10;
-            int j = (this.height - 166) / 2 + 8;
-            if(mouseX > (i - sliderValue) && mouseX < (i + sliderValue) && mouseY > (j - sliderValue) && mouseY < (j + sliderValue)){
+            int i = this.width / 2;
+            int j = this.height / 2;
+            float halfPreviewSize = 8.0F * getItemPreviewScale();
+            if(mouseX > (i - halfPreviewSize) && mouseX < (i + halfPreviewSize) && mouseY > (j - halfPreviewSize) && mouseY < (j + halfPreviewSize)){
                 ItemStack itemStack = zoomerBase.getItem(0);
                 guiGraphics.renderTooltip(font, itemStack, -500, -500);
             }
@@ -136,18 +144,17 @@ public class GuiItemZoomer extends Screen {
     }
 
     private void renderFocus(GuiGraphics guiGraphics) {
-        int i = (this.width - 248) / 2 + 10;
-        int j = (this.height - 166) / 2 + 8;
+        int i = this.width / 2;
+        int j = this.height / 2;
         ItemStack itemStack = zoomerBase.getItem(0);
-        float scale1 = (sliderValue / 100F);
-        float scale = scale1 * 12F;
+        float scale = getItemPreviewScale();
         if (!itemStack.isEmpty()) {
             guiGraphics.pose().pushPose();
             guiGraphics.pose().translate(i, j, 10F);
             guiGraphics.pose().scale(1.0F, 1.0F, 0.01F);
-            guiGraphics.pose().translate(113.5F - scale1 * 100, 76 - scale1 * 100, 2500F - sliderValue * 20);
+            guiGraphics.pose().translate(0.0F, 0.0F, 1500.0F);
             guiGraphics.pose().scale(scale, scale, scale);
-            guiGraphics.pose().translate(8.0F, 8.0F, 150.0F);
+            guiGraphics.pose().translate(0.0F, 0.0F, 150.0F);
             guiGraphics.pose().mulPose(Axis.XP.rotationDegrees(rotX));
             guiGraphics.pose().mulPose(Axis.YP.rotationDegrees(rotY));
             guiGraphics.pose().translate(-8.0F, -8.0F, -150.0F);
@@ -156,14 +163,53 @@ public class GuiItemZoomer extends Screen {
         }
     }
 
+    private void clearPreviewDepth() {
+        RenderSystem.clear(GL11.GL_DEPTH_BUFFER_BIT, Minecraft.ON_OSX);
+    }
+
+    private void renderCropFrame(GuiGraphics guiGraphics) {
+        int left = (this.width - CROP_FRAME_SIZE) / 2;
+        int top = (this.height - CROP_FRAME_SIZE) / 2;
+        int right = left + CROP_FRAME_SIZE;
+        int bottom = top + CROP_FRAME_SIZE;
+        guiGraphics.fill(left, top, right, top + 1, CROP_FRAME_COLOR);
+        guiGraphics.fill(left, bottom - 1, right, bottom, CROP_FRAME_COLOR);
+        guiGraphics.fill(left, top, left + 1, bottom, CROP_FRAME_COLOR);
+        guiGraphics.fill(right - 1, top, right, bottom, CROP_FRAME_COLOR);
+    }
+
+    private float getPreviewScale() {
+        return CROP_FRAME_SIZE / (float)getExportSize();
+    }
+
+    private float getItemPreviewScale() {
+        return (sliderValue / 100.0F) * 12.0F * getPreviewScale();
+    }
+
+    private void saveCurrentConfig() {
+        ZoomerSessionConfig.saveItem(sliderValue, background, getExportSize(), rotX, rotY);
+    }
+
+    private void applyConfig(ZoomerSessionConfig.ItemConfig config) {
+        this.sliderValue = config.zoomPercent;
+        this.prevSliderValue = this.sliderValue;
+        this.background = config.background;
+        this.exportSizeIndex = findExportSizeIndex(config.exportSize);
+        this.rotX = config.rotX;
+        this.rotY = config.rotY;
+    }
+
     public boolean isPauseScreen() {
         return false;
     }
 
     private static int findDefaultExportSizeIndex() {
-        int defaultSize = ExportManager.getDefaultExportSize();
+        return findExportSizeIndex(ExportManager.getDefaultExportSize());
+    }
+
+    private static int findExportSizeIndex(int exportSize) {
         for (int i = 0; i < EXPORT_SIZES.length; i++) {
-            if (EXPORT_SIZES[i] == defaultSize) {
+            if (EXPORT_SIZES[i] == exportSize) {
                 return i;
             }
         }
@@ -201,5 +247,11 @@ public class GuiItemZoomer extends Screen {
             zoomSlider.setValue(this.sliderValue);
         }
         return true;
+    }
+
+    @Override
+    public void onClose() {
+        saveCurrentConfig();
+        super.onClose();
     }
 }

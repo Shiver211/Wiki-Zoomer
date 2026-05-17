@@ -2,12 +2,8 @@ package com.github.alexthe666.wikizoomer.client;
 
 import com.github.alexthe666.wikizoomer.ClientProxy;
 import com.github.alexthe666.wikizoomer.tileentity.TileEntityEntityZoomer;
-import com.github.alexthe666.wikizoomer.client.ExportManager;
-import com.github.alexthe666.wikizoomer.client.ExportTask;
-import com.github.alexthe666.wikizoomer.client.GuiBatchExport;
 import com.mojang.blaze3d.platform.Lighting;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.*;
 import com.mojang.math.Axis;
 import net.minecraft.client.gui.GuiGraphics;
 import org.joml.Quaternionf;
@@ -26,11 +22,14 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.client.gui.widget.ForgeSlider;
-import net.minecraftforge.registries.ForgeRegistries;
+import org.lwjgl.glfw.GLFW;
+import org.lwjgl.opengl.GL11;
 import org.joml.Vector3f;
 
 @OnlyIn(Dist.CLIENT)
 public class GuiEntityZoomer extends Screen {
+    private static final int CROP_FRAME_SIZE = 192;
+    private static final int CROP_FRAME_COLOR = 0xFFFF0000;
     private TileEntityEntityZoomer zoomerBase;
     private ExportTask.Background background = ExportTask.Background.GREENSCREEN;
     private float sliderValue = 100;
@@ -39,11 +38,14 @@ public class GuiEntityZoomer extends Screen {
     private static final int[] EXPORT_SIZES = ExportManager.getExportSizes();
     private float rotX = 30F;
     private float rotY = 45F;
+    private float offsetX = 0.0F;
+    private float offsetY = 0.0F;
     private ForgeSlider zoomSlider;
 
     public GuiEntityZoomer(TileEntityEntityZoomer zoomerBase) {
         super(Component.translatable("entity_zoomer"));
         this.zoomerBase = zoomerBase;
+        applyConfig(ZoomerSessionConfig.getEntityConfig());
     }
 
     private void setSliderValue(int i, float sliderValue) {
@@ -60,6 +62,7 @@ public class GuiEntityZoomer extends Screen {
         MutableComponent backgroundLabel = Component.translatable("gui.wikizoomer.background", getBackgroundLabel());
         MutableComponent export = Component.translatable("gui.wikizoomer.export_png");
         MutableComponent batchExport = Component.translatable("gui.wikizoomer.batch_export");
+        MutableComponent clearConfig = Component.translatable("gui.wikizoomer.clear_config");
         MutableComponent resolutionLabel = Component.translatable("gui.wikizoomer.resolution", getExportSize(), getExportSize());
         int buttonWidth = 120;
         int buttonHeight = 20;
@@ -71,6 +74,7 @@ public class GuiEntityZoomer extends Screen {
         int col3X = startX + (buttonWidth + spacing) * 2;
         int row1Y = j + 180;
         int row2Y = row1Y + 22;
+        int row3Y = row2Y + 22;
         this.zoomSlider = new ForgeSlider(col1X, row1Y, buttonWidth, buttonHeight, Component.translatable("gui.wikizoomer.zoom"), Component.literal("%"), 1, 1000, sliderValue, 1, 1, true){
             @Override
             protected void applyValue() {
@@ -86,7 +90,8 @@ public class GuiEntityZoomer extends Screen {
         }).size(buttonWidth, buttonHeight).pos(col2X, row1Y).build());
         this.addRenderableWidget(Button.builder(export, (button) -> {
             Entity renderEntity = zoomerBase.getCachedEntity();
-            ExportTask task = ExportManager.createEntityTask(renderEntity, sliderValue, background, getExportSize(), false, rotX, rotY);
+            saveCurrentConfig();
+            ExportTask task = ExportManager.createEntityTask(renderEntity, sliderValue, background, getExportSize(), false, rotX, rotY, offsetX, offsetY);
             if (task == null) {
                 if (Minecraft.getInstance().player != null) {
                     Minecraft.getInstance().player.sendSystemMessage(Component.translatable("gui.wikizoomer.export_no_entity"));
@@ -100,11 +105,17 @@ public class GuiEntityZoomer extends Screen {
             init();
         }).size(buttonWidth, buttonHeight).pos(col1X, row2Y).build());
         this.addRenderableWidget(Button.builder(batchExport, (button) -> {
+            saveCurrentConfig();
             Minecraft.getInstance().setScreen(new GuiBatchExport());
         }).size(buttonWidth, buttonHeight).pos(col2X, row2Y).build());
         this.addRenderableWidget(Button.builder(exit, (button) -> {
+            saveCurrentConfig();
             Minecraft.getInstance().setScreen(null);
         }).size(buttonWidth, buttonHeight).pos(col3X, row2Y).build());
+        this.addRenderableWidget(Button.builder(clearConfig, (button) -> {
+            applyConfig(ZoomerSessionConfig.resetEntity());
+            init();
+        }).size(buttonWidth, buttonHeight).pos(col2X, row3Y).build());
     }
 
     public void renderGreenscreen(GuiGraphics guiGraphics) {
@@ -124,7 +135,9 @@ public class GuiEntityZoomer extends Screen {
 
             }
         }
+        clearPreviewDepth();
         renderFocus(guiGraphics);
+        renderCropFrame(guiGraphics);
         guiGraphics.pose().pushPose();
         guiGraphics.pose().translate(0, 0, 5000F);
         super.render(guiGraphics, mouseX, mouseY, partialTicks);
@@ -143,9 +156,10 @@ public class GuiEntityZoomer extends Screen {
             if ((double)f1 > 1.0D) {
                 f /= f1;
             }
-            float scale2 = scale;
-            int i = (this.width) / 2;
-            int j = (this.height + (int)((scale / 100F) * (renderEntity.getBbHeight() * 100F))) / 2;
+            float previewScale = getPreviewScale();
+            float scale2 = scale * previewScale;
+            float i = (this.width) / 2.0F + offsetX * previewScale;
+            float j = (this.height + (int)((scale / 100F) * (renderEntity.getBbHeight() * 100F) * previewScale)) / 2.0F + offsetY * previewScale;
 
             boolean isMimic = false;
             if(ClientProxy.dataMimic != null){
@@ -161,6 +175,40 @@ public class GuiEntityZoomer extends Screen {
         }
         guiGraphics.pose().popPose();
         prevSliderValue = sliderValue;
+    }
+
+    private void clearPreviewDepth() {
+        RenderSystem.clear(GL11.GL_DEPTH_BUFFER_BIT, Minecraft.ON_OSX);
+    }
+
+    private void renderCropFrame(GuiGraphics guiGraphics) {
+        int left = (this.width - CROP_FRAME_SIZE) / 2;
+        int top = (this.height - CROP_FRAME_SIZE) / 2;
+        int right = left + CROP_FRAME_SIZE;
+        int bottom = top + CROP_FRAME_SIZE;
+        guiGraphics.fill(left, top, right, top + 1, CROP_FRAME_COLOR);
+        guiGraphics.fill(left, bottom - 1, right, bottom, CROP_FRAME_COLOR);
+        guiGraphics.fill(left, top, left + 1, bottom, CROP_FRAME_COLOR);
+        guiGraphics.fill(right - 1, top, right, bottom, CROP_FRAME_COLOR);
+    }
+
+    private float getPreviewScale() {
+        return CROP_FRAME_SIZE / (float)getExportSize();
+    }
+
+    private void saveCurrentConfig() {
+        ZoomerSessionConfig.saveEntity(sliderValue, background, getExportSize(), rotX, rotY, offsetX, offsetY);
+    }
+
+    private void applyConfig(ZoomerSessionConfig.EntityConfig config) {
+        this.sliderValue = config.zoomPercent;
+        this.prevSliderValue = this.sliderValue;
+        this.background = config.background;
+        this.exportSizeIndex = findExportSizeIndex(config.exportSize);
+        this.rotX = config.rotX;
+        this.rotY = config.rotY;
+        this.offsetX = config.offsetX;
+        this.offsetY = config.offsetY;
     }
 
     public static void drawEntityOnScreen(GuiGraphics guiGraphics, int posX, int posY, float scale, boolean follow, double xRot, double yRot, double zRot, float mouseX, float mouseY, Entity entity, boolean isMimic) {
@@ -219,9 +267,12 @@ public class GuiEntityZoomer extends Screen {
     }
 
     private static int findDefaultExportSizeIndex() {
-        int defaultSize = ExportManager.getDefaultExportSize();
+        return findExportSizeIndex(ExportManager.getDefaultExportSize());
+    }
+
+    private static int findExportSizeIndex(int exportSize) {
         for (int i = 0; i < EXPORT_SIZES.length; i++) {
-            if (EXPORT_SIZES[i] == defaultSize) {
+            if (EXPORT_SIZES[i] == exportSize) {
                 return i;
             }
         }
@@ -259,5 +310,30 @@ public class GuiEntityZoomer extends Screen {
             zoomSlider.setValue(this.sliderValue);
         }
         return true;
+    }
+
+    @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        float step = hasShiftDown() ? 1.0F : 5.0F;
+        if (keyCode == GLFW.GLFW_KEY_W) {
+            offsetY -= step;
+            return true;
+        } else if (keyCode == GLFW.GLFW_KEY_S) {
+            offsetY += step;
+            return true;
+        } else if (keyCode == GLFW.GLFW_KEY_A) {
+            offsetX -= step;
+            return true;
+        } else if (keyCode == GLFW.GLFW_KEY_D) {
+            offsetX += step;
+            return true;
+        }
+        return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    @Override
+    public void onClose() {
+        saveCurrentConfig();
+        super.onClose();
     }
 }
