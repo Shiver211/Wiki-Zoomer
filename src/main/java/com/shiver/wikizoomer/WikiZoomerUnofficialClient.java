@@ -16,7 +16,7 @@ public class WikiZoomerUnofficialClient {
     @Nullable
     public static Entity dataMimic = null;
 
-    // Mod bus events (entity renderers, etc.)
+    // Mod bus events
     @EventBusSubscriber(modid = WikiZoomerUnofficial.MODID, value = Dist.CLIENT)
     public static class ModBusEvents {
         @SubscribeEvent
@@ -26,7 +26,7 @@ public class WikiZoomerUnofficialClient {
         }
     }
 
-    // Game bus events (tick, logout, etc.)
+    // Game bus events
     @EventBusSubscriber(modid = WikiZoomerUnofficial.MODID, value = Dist.CLIENT)
     public static class GameBusEvents {
         @SubscribeEvent

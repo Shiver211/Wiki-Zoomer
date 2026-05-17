@@ -95,7 +95,7 @@ public class ExportManager {
     }
 
     public static ExportTask createEntityTask(Entity entity, float zoomPercent, ExportTask.Background background,
-                                              int exportSize, boolean isBatch, float rotX, float rotY) {
+                                                int exportSize, boolean isBatch, float rotX, float rotY) {
         if (entity == null) {
             return null;
         }
@@ -256,7 +256,7 @@ public class ExportManager {
     }
 
     private static void renderItemCentered(PoseStack poseStack, MultiBufferSource.BufferSource bufferSource,
-                                           ItemStack stack, int exportSize, float zoomPercent, float rotX, float rotY) {
+                                            ItemStack stack, int exportSize, float zoomPercent, float rotX, float rotY) {
         float scale = zoomPercent * 1.92F;
         poseStack.pushPose();
         poseStack.translate(exportSize / 2.0F, exportSize / 2.0F, 100.0F);
@@ -276,7 +276,7 @@ public class ExportManager {
     }
 
     private static void renderEntityCentered(PoseStack poseStack, MultiBufferSource.BufferSource bufferSource,
-                                             Entity entity, int exportSize, float zoomPercent, float rotX, float rotY) {
+                                                Entity entity, int exportSize, float zoomPercent, float rotX, float rotY) {
         int centerX = exportSize / 2;
         int centerY = (exportSize + (int) ((zoomPercent / 100.0F) * (entity.getBbHeight() * 100.0F))) / 2;
         Entity renderEntity = entity;

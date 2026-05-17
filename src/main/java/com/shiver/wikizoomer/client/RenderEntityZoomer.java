@@ -19,7 +19,7 @@ public class RenderEntityZoomer implements BlockEntityRenderer<TileEntityEntityZ
 
     @Override
     public void render(TileEntityEntityZoomer tileEntityIn, float partialTicks, PoseStack poseStack,
-                       MultiBufferSource bufferIn, int combinedLightIn, int combinedOverlayIn) {
+                        MultiBufferSource bufferIn, int combinedLightIn, int combinedOverlayIn) {
         Entity renderEntity = null;
         int ticksExisted = 0;
         if (tileEntityIn != null && tileEntityIn.getLevel() != null

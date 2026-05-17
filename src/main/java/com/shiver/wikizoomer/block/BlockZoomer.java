@@ -53,9 +53,6 @@ public class BlockZoomer extends BaseEntityBlock {
 
     @Override
     protected MapCodec<? extends BaseEntityBlock> codec() {
-        // Return a codec that reconstructs this block with the correct itemOrEntity flag.
-        // Since these blocks are registered as singletons, we use MapCodec.unit to return
-        // the already-registered instance during deserialization.
         if (itemOrEntity) {
             return MapCodec.unit(() -> (BaseEntityBlock) WikiZoomerUnofficial.ITEM_ZOOMER_BLOCK.get());
         } else {
