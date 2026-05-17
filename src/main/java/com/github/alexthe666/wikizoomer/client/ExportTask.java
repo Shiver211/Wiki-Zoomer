@@ -26,8 +26,10 @@ public class ExportTask {
     public final boolean isBatch;
     public final float zoomPercent;
     public final int exportSize;
+    public final int offsetX;
+    public final int offsetY;
 
-    private ExportTask(Type type, ItemStack itemStack, Entity entity, ResourceLocation entityId, File outputFile, Background background, boolean isBatch, float zoomPercent, int exportSize) {
+    private ExportTask(Type type, ItemStack itemStack, Entity entity, ResourceLocation entityId, File outputFile, Background background, boolean isBatch, float zoomPercent, int exportSize, int offsetX, int offsetY) {
         this.type = type;
         this.itemStack = itemStack;
         this.entity = entity;
@@ -37,19 +39,21 @@ public class ExportTask {
         this.isBatch = isBatch;
         this.zoomPercent = zoomPercent;
         this.exportSize = exportSize;
+        this.offsetX = offsetX;
+        this.offsetY = offsetY;
     }
 
     public static ExportTask forItem(ItemStack stack, File outputFile, Background background, boolean isBatch, float zoomPercent, int exportSize) {
         ItemStack copy = stack.copy();
         copy.setCount(1);
-        return new ExportTask(Type.ITEM, copy, null, null, outputFile, background, isBatch, zoomPercent, exportSize);
+        return new ExportTask(Type.ITEM, copy, null, null, outputFile, background, isBatch, zoomPercent, exportSize, 0, 0);
     }
 
-    public static ExportTask forEntity(Entity entity, File outputFile, Background background, boolean isBatch, float zoomPercent, int exportSize) {
-        return new ExportTask(Type.ENTITY, ItemStack.EMPTY, entity, null, outputFile, background, isBatch, zoomPercent, exportSize);
+    public static ExportTask forEntity(Entity entity, File outputFile, Background background, boolean isBatch, float zoomPercent, int exportSize, int offsetX, int offsetY) {
+        return new ExportTask(Type.ENTITY, ItemStack.EMPTY, entity, null, outputFile, background, isBatch, zoomPercent, exportSize, offsetX, offsetY);
     }
 
-    public static ExportTask forEntityId(ResourceLocation entityId, File outputFile, Background background, boolean isBatch, float zoomPercent, int exportSize) {
-        return new ExportTask(Type.ENTITY, ItemStack.EMPTY, null, entityId, outputFile, background, isBatch, zoomPercent, exportSize);
+    public static ExportTask forEntityId(ResourceLocation entityId, File outputFile, Background background, boolean isBatch, float zoomPercent, int exportSize, int offsetX, int offsetY) {
+        return new ExportTask(Type.ENTITY, ItemStack.EMPTY, null, entityId, outputFile, background, isBatch, zoomPercent, exportSize, offsetX, offsetY);
     }
 }

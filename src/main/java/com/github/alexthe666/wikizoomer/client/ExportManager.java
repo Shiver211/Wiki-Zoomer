@@ -33,7 +33,7 @@ import java.util.Queue;
 public class ExportManager {
     private static final Logger LOGGER = LogManager.getLogger();
     private static final int DEFAULT_EXPORT_SIZE = 512;
-    private static final int[] EXPORT_SIZES = new int[]{64, 128, 256, 512};
+    private static final int[] EXPORT_SIZES = new int[]{64, 128, 256, 512, 1024};
     private static final float DEFAULT_ZOOM = 100F;
     private static final float ITEM_BASE_SCALE = 16F;
     private static final Queue<ExportTask> QUEUE = new ArrayDeque<>();
@@ -81,7 +81,7 @@ public class ExportManager {
         return ExportTask.forItem(stack, output, background, isBatch, zoomPercent, exportSize);
     }
 
-    public static ExportTask createEntityTask(Entity entity, float zoomPercent, ExportTask.Background background, int exportSize, boolean isBatch) {
+    public static ExportTask createEntityTask(Entity entity, float zoomPercent, ExportTask.Background background, int exportSize, boolean isBatch, int offsetX, int offsetY) {
         if (entity == null) {
             return null;
         }
@@ -90,15 +90,15 @@ public class ExportManager {
             return null;
         }
         File output = getOutputFile(id);
-        return ExportTask.forEntity(entity, output, background, isBatch, zoomPercent, exportSize);
+        return ExportTask.forEntity(entity, output, background, isBatch, zoomPercent, exportSize, offsetX, offsetY);
     }
 
-    public static ExportTask createEntityIdTask(ResourceLocation entityId, float zoomPercent, ExportTask.Background background, int exportSize, boolean isBatch) {
+    public static ExportTask createEntityIdTask(ResourceLocation entityId, float zoomPercent, ExportTask.Background background, int exportSize, boolean isBatch, int offsetX, int offsetY) {
         if (entityId == null) {
             return null;
         }
         File output = getOutputFile(entityId);
-        return ExportTask.forEntityId(entityId, output, background, isBatch, zoomPercent, exportSize);
+        return ExportTask.forEntityId(entityId, output, background, isBatch, zoomPercent, exportSize, offsetX, offsetY);
     }
 
     public static void tick() {
@@ -178,7 +178,7 @@ public class ExportManager {
             if (task.type == ExportTask.Type.ITEM) {
                 renderItem(task.itemStack, task.zoomPercent, exportSize);
             } else {
-                renderEntity(mc, entity, task.zoomPercent, exportSize);
+                renderEntity(mc, entity, task.zoomPercent, exportSize, task.offsetX, task.offsetY);
             }
             boolean transparent = task.background == ExportTask.Background.TRANSPARENT;
             BufferedImage image = readFramebuffer(exportSize, exportSize, framebuffer, transparent);
@@ -234,7 +234,7 @@ public class ExportManager {
         GlStateManager.popMatrix();
     }
 
-    private static void renderEntity(Minecraft mc, Entity entity, float zoomPercent, int exportSize) {
+    private static void renderEntity(Minecraft mc, Entity entity, float zoomPercent, int exportSize, int offsetX, int offsetY) {
         entity.ticksExisted = 0;
         if (entity instanceof EntityLivingBase) {
             ((EntityLivingBase) entity).rotationYawHead = 0;
@@ -248,8 +248,8 @@ public class ExportManager {
         float scale = baseScale * sizeScale;
         GlStateManager.enableColorMaterial();
         GlStateManager.pushMatrix();
-        float centerX = exportSize / 2F;
-        float centerY = exportSize / 2F + (entity.height * scale) / 2F;
+        float centerX = exportSize / 2F + offsetX;
+        float centerY = exportSize / 2F + (entity.height * scale) / 2F + offsetY;
         GlStateManager.translate(centerX, centerY, 150.0F + scale);
         GlStateManager.scale(-scale, scale, scale);
         GlStateManager.rotate(-30.0F, 1.0F, 0.0F, 0.0F);

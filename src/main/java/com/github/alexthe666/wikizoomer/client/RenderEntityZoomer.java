@@ -29,10 +29,10 @@ public class RenderEntityZoomer extends TileEntitySpecialRenderer<TileEntityEnti
         float rrr = (float) ticksExisted - 1 + Minecraft.getMinecraft().getRenderPartialTicks();
         GlStateManager.pushMatrix();
         GlStateManager.translate(x, y, z);
-        GlStateManager.translate(0.5D, 1.0D, 0.5D);
+        GlStateManager.translate(0.5D, 0.5D, 0.5D);
         GlStateManager.pushMatrix();
         GlStateManager.rotate(rrr * 2F, 0, 1, 0);
-        GlStateManager.translate(0D, 0.1F + Math.sin(rrr * 0.05F) * 0.1F, 0D);
+        GlStateManager.translate(0D, 0.5D + 0.1F + Math.sin(rrr * 0.05F) * 0.1F, 0D);
         GlStateManager.scale(0.5F, 0.5F, 0.5F);
         if(renderEntity != null){
             float f = 0.75F;

@@ -17,7 +17,7 @@ import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-@Mod(modid = "wikizoomer", name = "Wiki Zoomer",  version = "1.0.0")
+@Mod(modid = "wikizoomer", name = "Wiki Zoomer",  version = "1.0.3")
 @Mod.EventBusSubscriber
 public class WikiZoomerMod {
     private static final Logger LOGGER = LogManager.getLogger();

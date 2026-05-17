@@ -30,10 +30,10 @@ public class RenderItemZoomer extends TileEntitySpecialRenderer<TileEntityItemZo
         float f = (float) ticksExisted - 1 + Minecraft.getMinecraft().getRenderPartialTicks();
         GlStateManager.pushMatrix();
         GlStateManager.translate(x, y, z);
-        GlStateManager.translate(0.5D, 1.25D, 0.5D);
+        GlStateManager.translate(0.5D, 0.75D, 0.5D);
         GlStateManager.pushMatrix();
         GlStateManager.rotate(f * 2F, 0, 1, 0);
-        GlStateManager.translate(0D, 0.1F + Math.sin(f * 0.05F) * 0.1F, 0D);
+        GlStateManager.translate(0D, 0.5D + 0.1F + Math.sin(f * 0.05F) * 0.1F, 0D);
         GlStateManager.scale(0.5F, 0.5F, 0.5F);
         Minecraft.getMinecraft().getRenderItem().renderItem(stack, ItemCameraTransforms.TransformType.FIXED);
         GlStateManager.popMatrix();

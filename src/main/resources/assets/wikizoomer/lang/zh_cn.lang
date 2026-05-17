@@ -33,3 +33,6 @@ gui.wikizoomer.batch_started=批量导出已排队：%s
 gui.wikizoomer.batch_done=批量导出完成
 gui.wikizoomer.export_done=已导出：%s
 itemGroup.wikizoomer=Wiki Zoomer
+gui.wikizoomer.clear_config=清除配置
+gui.wikizoomer.configured=已配置
+gui.wikizoomer.resolution_configured=分辨率：已配置

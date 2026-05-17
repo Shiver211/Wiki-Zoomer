@@ -35,6 +35,9 @@ public class GuiBatchExport extends GuiScreen {
     private List<ModEntry> entries = new ArrayList<>();
     private boolean exportItems = true;
     private boolean exportEntities = true;
+    private boolean useItemConfig = true;
+    private boolean useEntityConfig = true;
+    private boolean sliderModified = false;
     private ExportTask.Background background = ExportTask.Background.GREENSCREEN;
     private int exportSizeIndex = findDefaultExportSizeIndex();
     private static final int[] EXPORT_SIZES = ExportManager.getExportSizes();
@@ -87,10 +90,13 @@ public class GuiBatchExport extends GuiScreen {
         net.minecraft.client.gui.GuiSlider.FormatHelper formatHelper = new net.minecraft.client.gui.GuiSlider.FormatHelper() {
             @Override
             public String getText(int id, String name, float value) {
+                if (!sliderModified && (useItemConfig || useEntityConfig)) {
+                    return I18n.format("gui.wikizoomer.zoom") + ": " + I18n.format("gui.wikizoomer.configured");
+                }
                 return name + ": " + (int)Math.round(value) + "%";
             }
         };
-        net.minecraft.client.gui.GuiSlider slider = new net.minecraft.client.gui.GuiSlider(sliderResponder, 8, col1X, row2Y, I18n.format("gui.wikizoomer.zoom"), 1, 300, zoomPercent, formatHelper);
+        net.minecraft.client.gui.GuiSlider slider = new net.minecraft.client.gui.GuiSlider(sliderResponder, 8, col1X, row2Y, I18n.format("gui.wikizoomer.zoom"), 1, 1000, zoomPercent, formatHelper);
         slider.width = buttonWidth;
         slider.height = buttonHeight;
         this.addButton(slider);
@@ -120,9 +126,13 @@ public class GuiBatchExport extends GuiScreen {
             updateButtonLabels();
         } else if (button.id == 2) {
             background = background == ExportTask.Background.GREENSCREEN ? ExportTask.Background.TRANSPARENT : ExportTask.Background.GREENSCREEN;
+            useItemConfig = false;
+            useEntityConfig = false;
             updateButtonLabels();
         } else if (button.id == 3) {
             exportSizeIndex = (exportSizeIndex + 1) % EXPORT_SIZES.length;
+            useItemConfig = false;
+            useEntityConfig = false;
             updateButtonLabels();
         } else if (button.id == 4) {
             setAllSelected(true);
@@ -164,8 +174,13 @@ public class GuiBatchExport extends GuiScreen {
     private void updateButtonLabels() {
         this.itemsButton.displayString = I18n.format("gui.wikizoomer.batch_items", exportItems ? "ON" : "OFF");
         this.entitiesButton.displayString = I18n.format("gui.wikizoomer.batch_entities", exportEntities ? "ON" : "OFF");
-        this.backgroundButton.displayString = I18n.format("gui.wikizoomer.background", getBackgroundLabel());
-        this.resolutionButton.displayString = I18n.format("gui.wikizoomer.resolution", getExportSize(), getExportSize());
+        if (useItemConfig || useEntityConfig) {
+            this.backgroundButton.displayString = I18n.format("gui.wikizoomer.background", I18n.format("gui.wikizoomer.configured"));
+            this.resolutionButton.displayString = I18n.format("gui.wikizoomer.resolution_configured");
+        } else {
+            this.backgroundButton.displayString = I18n.format("gui.wikizoomer.background", getBackgroundLabel());
+            this.resolutionButton.displayString = I18n.format("gui.wikizoomer.resolution", getExportSize(), getExportSize());
+        }
     }
 
     private void startExport() {
@@ -179,9 +194,12 @@ public class GuiBatchExport extends GuiScreen {
             return;
         }
         List<ExportTask> tasks = new ArrayList<>();
-        float zoom = zoomPercent;
-        int exportSize = getExportSize();
+        ZoomerConfigCache itemConfig = ZoomerConfigCache.lastItemConfig;
+        ZoomerConfigCache entityConfig = ZoomerConfigCache.lastEntityConfig;
         if (exportItems) {
+            float itemZoom = useItemConfig ? itemConfig.zoomPercent : zoomPercent;
+            ExportTask.Background itemBg = useItemConfig ? itemConfig.background : background;
+            int itemSize = useItemConfig ? itemConfig.exportSize : getExportSize();
             for (Item item : ForgeRegistries.ITEMS.getValuesCollection()) {
                 if (item == Items.AIR) {
                     continue;
@@ -190,13 +208,18 @@ public class GuiBatchExport extends GuiScreen {
                 if (id == null || !modIds.contains(id.getNamespace())) {
                     continue;
                 }
-                ExportTask task = ExportManager.createItemTask(new ItemStack(item), zoom, background, exportSize, true);
+                ExportTask task = ExportManager.createItemTask(new ItemStack(item), itemZoom, itemBg, itemSize, true);
                 if (task != null) {
                     tasks.add(task);
                 }
             }
         }
         if (exportEntities) {
+            float entityZoom = useEntityConfig ? entityConfig.zoomPercent : zoomPercent;
+            ExportTask.Background entityBg = useEntityConfig ? entityConfig.background : background;
+            int entitySize = useEntityConfig ? entityConfig.exportSize : getExportSize();
+            int entityOffX = useEntityConfig ? entityConfig.offsetX : 0;
+            int entityOffY = useEntityConfig ? entityConfig.offsetY : 0;
             for (EntityEntry entry : ForgeRegistries.ENTITIES.getValuesCollection()) {
                 ResourceLocation id = entry.getRegistryName();
                 if (id == null || !modIds.contains(id.getNamespace())) {
@@ -208,7 +231,7 @@ public class GuiBatchExport extends GuiScreen {
                 if (ModConfig.onlyLivingEntities && !EntityLivingBase.class.isAssignableFrom(entry.getEntityClass())) {
                     continue;
                 }
-                ExportTask task = ExportManager.createEntityIdTask(id, zoom, background, exportSize, true);
+                ExportTask task = ExportManager.createEntityIdTask(id, entityZoom, entityBg, entitySize, true, entityOffX, entityOffY);
                 if (task != null) {
                     tasks.add(task);
                 }
@@ -256,6 +279,10 @@ public class GuiBatchExport extends GuiScreen {
 
     private void setZoomValue(int id, float value) {
         zoomPercent = value;
+        useItemConfig = false;
+        useEntityConfig = false;
+        sliderModified = true;
+        updateButtonLabels();
     }
 
     private static int findDefaultExportSizeIndex() {
