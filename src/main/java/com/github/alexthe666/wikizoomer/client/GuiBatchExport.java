@@ -200,6 +200,8 @@ public class GuiBatchExport extends GuiScreen {
             float itemZoom = useItemConfig ? itemConfig.zoomPercent : zoomPercent;
             ExportTask.Background itemBg = useItemConfig ? itemConfig.background : background;
             int itemSize = useItemConfig ? itemConfig.exportSize : getExportSize();
+            float itemRotX = useItemConfig ? itemConfig.rotX : 0F;
+            float itemRotY = useItemConfig ? itemConfig.rotY : 0F;
             for (Item item : ForgeRegistries.ITEMS.getValuesCollection()) {
                 if (item == Items.AIR) {
                     continue;
@@ -208,7 +210,7 @@ public class GuiBatchExport extends GuiScreen {
                 if (id == null || !modIds.contains(id.getNamespace())) {
                     continue;
                 }
-                ExportTask task = ExportManager.createItemTask(new ItemStack(item), itemZoom, itemBg, itemSize, true);
+                ExportTask task = ExportManager.createItemTask(new ItemStack(item), itemZoom, itemBg, itemSize, true, itemRotX, itemRotY);
                 if (task != null) {
                     tasks.add(task);
                 }
@@ -218,6 +220,8 @@ public class GuiBatchExport extends GuiScreen {
             float entityZoom = useEntityConfig ? entityConfig.zoomPercent : zoomPercent;
             ExportTask.Background entityBg = useEntityConfig ? entityConfig.background : background;
             int entitySize = useEntityConfig ? entityConfig.exportSize : getExportSize();
+            float entityRotX = useEntityConfig ? entityConfig.rotX : -30F;
+            float entityRotY = useEntityConfig ? entityConfig.rotY : 45F;
             int entityOffX = useEntityConfig ? entityConfig.offsetX : 0;
             int entityOffY = useEntityConfig ? entityConfig.offsetY : 0;
             for (EntityEntry entry : ForgeRegistries.ENTITIES.getValuesCollection()) {
@@ -231,7 +235,7 @@ public class GuiBatchExport extends GuiScreen {
                 if (ModConfig.onlyLivingEntities && !EntityLivingBase.class.isAssignableFrom(entry.getEntityClass())) {
                     continue;
                 }
-                ExportTask task = ExportManager.createEntityIdTask(id, entityZoom, entityBg, entitySize, true, entityOffX, entityOffY);
+                ExportTask task = ExportManager.createEntityIdTask(id, entityZoom, entityBg, entitySize, true, entityRotX, entityRotY, entityOffX, entityOffY);
                 if (task != null) {
                     tasks.add(task);
                 }

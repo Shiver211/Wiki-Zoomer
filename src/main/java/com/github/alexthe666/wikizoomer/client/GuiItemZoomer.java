@@ -11,6 +11,7 @@ import net.minecraft.client.renderer.block.model.IBakedModel;
 import net.minecraft.client.renderer.block.model.ItemCameraTransforms;
 import net.minecraft.client.renderer.texture.TextureMap;
 import net.minecraft.client.resources.I18n;
+import net.minecraft.item.ItemBlock;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.math.BlockPos;
@@ -36,7 +37,6 @@ public class GuiItemZoomer extends GuiScreen {
     private TileEntityZoomerBase zoomerBase;
     private ExportTask.Background background = ExportTask.Background.GREENSCREEN;
     private float sliderValue = 100;
-    private float prevSliderValue = sliderValue;
     private int exportSizeIndex = findDefaultExportSizeIndex();
     private static final int[] EXPORT_SIZES = ExportManager.getExportSizes();
     private float rotX = 0F;
@@ -70,7 +70,6 @@ public class GuiItemZoomer extends GuiScreen {
     private void applyLastConfig() {
         ZoomerConfigCache lastConfig = ZoomerConfigCache.lastItemConfig;
         sliderValue = lastConfig.zoomPercent;
-        prevSliderValue = sliderValue;
         background = lastConfig.background;
         exportSizeIndex = findExportSizeIndex(lastConfig.exportSize);
         rotX = lastConfig.rotX;
@@ -79,7 +78,6 @@ public class GuiItemZoomer extends GuiScreen {
 
     private void setSliderValue(int i, float sliderValue) {
         this.sliderValue = sliderValue;
-        prevSliderValue = this.sliderValue;
     }
 
     public void initGui() {
@@ -136,7 +134,7 @@ public class GuiItemZoomer extends GuiScreen {
         }
         if (button.enabled && button.id == 3) {
             saveConfig();
-            ExportTask task = ExportManager.createItemTask(zoomerBase.getStackInSlot(0), sliderValue, background, getExportSize(), false);
+            ExportTask task = ExportManager.createItemTask(zoomerBase.getStackInSlot(0), sliderValue, background, getExportSize(), false, rotX, rotY);
             if (task == null) {
                 if (Minecraft.getMinecraft().player != null) {
                     Minecraft.getMinecraft().player.sendMessage(new TextComponentString(I18n.format("gui.wikizoomer.export_no_item")));
@@ -151,6 +149,7 @@ public class GuiItemZoomer extends GuiScreen {
         }
         if (button.enabled && button.id == 6) {
             resetToDefaults();
+            return;
         }
         if (button.enabled && button.id == 5) {
             exportSizeIndex = (exportSizeIndex + 1) % EXPORT_SIZES.length;
@@ -251,8 +250,10 @@ public class GuiItemZoomer extends GuiScreen {
                 GlStateManager.disableLighting();
             }
             model = ForgeHooksClient.handleCameraTransforms(model, ItemCameraTransforms.TransformType.GUI, false);
-            GlStateManager.rotate(rotX, 1, 0, 0);
-            GlStateManager.rotate(rotY, 0, 1, 0);
+            if (stack.getItem() instanceof ItemBlock) {
+                GlStateManager.rotate(rotX, 1, 0, 0);
+                GlStateManager.rotate(rotY, 0, 1, 0);
+            }
             renderItem.renderItem(stack, model);
             GlStateManager.disableAlpha();
             GlStateManager.disableRescaleNormal();
@@ -269,7 +270,7 @@ public class GuiItemZoomer extends GuiScreen {
     @Override
     protected void mouseClicked(int mouseX, int mouseY, int mouseButton) throws IOException {
         super.mouseClicked(mouseX, mouseY, mouseButton);
-        if (mouseButton == 0) {
+        if (mouseButton == 0 && isMouseInPreviewBox(mouseX, mouseY) && !isMouseOverButton(mouseX, mouseY)) {
             dragging = true;
             lastMouseX = mouseX;
             lastMouseY = mouseY;
@@ -287,7 +288,7 @@ public class GuiItemZoomer extends GuiScreen {
     @Override
     protected void mouseClickMove(int mouseX, int mouseY, int clickedMouseButton, long timeSinceLastClick) {
         super.mouseClickMove(mouseX, mouseY, clickedMouseButton, timeSinceLastClick);
-        if (dragging) {
+        if (dragging && clickedMouseButton == 0) {
             int dx = mouseX - lastMouseX;
             int dy = mouseY - lastMouseY;
             rotY += dx * 0.5F;
@@ -301,7 +302,7 @@ public class GuiItemZoomer extends GuiScreen {
     public void handleMouseInput() throws IOException {
         super.handleMouseInput();
         int dWheel = org.lwjgl.input.Mouse.getEventDWheel();
-        if (dWheel != 0) {
+        if (dWheel != 0 && isMouseInPreviewBox(org.lwjgl.input.Mouse.getEventX() * this.width / this.mc.displayWidth, this.height - org.lwjgl.input.Mouse.getEventY() * this.height / this.mc.displayHeight - 1)) {
             if (dWheel > 0) {
                 sliderValue = Math.min(1000, sliderValue + 5);
             } else {
@@ -333,6 +334,22 @@ public class GuiItemZoomer extends GuiScreen {
         return background == ExportTask.Background.GREENSCREEN
                 ? I18n.format("gui.wikizoomer.background.greenscreen")
                 : I18n.format("gui.wikizoomer.background.transparent");
+    }
+
+    private boolean isMouseInPreviewBox(int mouseX, int mouseY) {
+        int boxSize = Math.min(this.width, this.height) / 2;
+        int boxX = (this.width - boxSize) / 2;
+        int boxY = (this.height - boxSize) / 2;
+        return mouseX >= boxX && mouseX < boxX + boxSize && mouseY >= boxY && mouseY < boxY + boxSize;
+    }
+
+    private boolean isMouseOverButton(int mouseX, int mouseY) {
+        for (GuiButton button : this.buttonList) {
+            if (button.visible && mouseX >= button.x && mouseY >= button.y && mouseX < button.x + button.width && mouseY < button.y + button.height) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void saveConfig() {

@@ -37,16 +37,4 @@ public class ZoomerConfigCache {
 
     public static ZoomerConfigCache lastItemConfig = getItemDefaults();
     public static ZoomerConfigCache lastEntityConfig = getEntityDefaults();
-
-    public ZoomerConfigCache copy() {
-        ZoomerConfigCache copy = new ZoomerConfigCache();
-        copy.zoomPercent = this.zoomPercent;
-        copy.background = this.background;
-        copy.exportSize = this.exportSize;
-        copy.rotX = this.rotX;
-        copy.rotY = this.rotY;
-        copy.offsetX = this.offsetX;
-        copy.offsetY = this.offsetY;
-        return copy;
-    }
 }

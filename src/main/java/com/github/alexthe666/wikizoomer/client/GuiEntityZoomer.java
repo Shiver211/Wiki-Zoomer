@@ -34,7 +34,6 @@ public class GuiEntityZoomer extends GuiScreen {
     private TileEntityEntityZoomer zoomerBase;
     private ExportTask.Background background = ExportTask.Background.GREENSCREEN;
     private float sliderValue = 100;
-    private float prevSliderValue = sliderValue;
     private int exportSizeIndex = findDefaultExportSizeIndex();
     private static final int[] EXPORT_SIZES = ExportManager.getExportSizes();
     private float rotX = -30F;
@@ -70,7 +69,6 @@ public class GuiEntityZoomer extends GuiScreen {
     private void applyLastConfig() {
         ZoomerConfigCache lastConfig = ZoomerConfigCache.lastEntityConfig;
         sliderValue = lastConfig.zoomPercent;
-        prevSliderValue = sliderValue;
         background = lastConfig.background;
         exportSizeIndex = findExportSizeIndex(lastConfig.exportSize);
         rotX = lastConfig.rotX;
@@ -81,7 +79,6 @@ public class GuiEntityZoomer extends GuiScreen {
 
     private void setSliderValue(int i, float sliderValue) {
         this.sliderValue = sliderValue;
-        prevSliderValue = this.sliderValue;
     }
 
     public void initGui() {
@@ -139,7 +136,7 @@ public class GuiEntityZoomer extends GuiScreen {
         if (button.enabled && button.id == 3) {
             saveConfig();
             Entity entity = zoomerBase.getCachedEntity();
-            ExportTask task = ExportManager.createEntityTask(entity, sliderValue, background, getExportSize(), false, offsetX, offsetY);
+            ExportTask task = ExportManager.createEntityTask(entity, sliderValue, background, getExportSize(), false, rotX, rotY, offsetX, offsetY);
             if (task == null) {
                 if (Minecraft.getMinecraft().player != null) {
                     Minecraft.getMinecraft().player.sendMessage(new TextComponentString(I18n.format("gui.wikizoomer.export_no_entity")));
@@ -157,6 +154,7 @@ public class GuiEntityZoomer extends GuiScreen {
         }
         if (button.enabled && button.id == 6) {
             resetToDefaults();
+            return;
         }
         initGui();
     }
@@ -183,10 +181,11 @@ public class GuiEntityZoomer extends GuiScreen {
         // Clear depth buffer so background doesn't clip the preview
         net.minecraft.client.renderer.GlStateManager.clear(org.lwjgl.opengl.GL11.GL_DEPTH_BUFFER_BIT);
 
-        int centerX = this.width / 2 + offsetX;
-        int centerY = this.height / 2 + offsetY;
         Entity renderEntity = zoomerBase.getCachedEntity();
         int boxSize = Math.min(this.width, this.height) / 2;
+        float previewPixelScale = (float)boxSize / getExportSize();
+        int centerX = this.width / 2 + Math.round(offsetX * previewPixelScale);
+        int centerY = this.height / 2 + Math.round(offsetY * previewPixelScale);
         float displayScale = (float)boxSize / getExportSize() * (sliderValue / 100F) * 100F;
         if (renderEntity != null) {
             // Set up wide-depth orthographic projection like ExportManager
@@ -274,7 +273,7 @@ public class GuiEntityZoomer extends GuiScreen {
     @Override
     protected void mouseClicked(int mouseX, int mouseY, int mouseButton) throws IOException {
         super.mouseClicked(mouseX, mouseY, mouseButton);
-        if (mouseButton == 0) {
+        if (mouseButton == 0 && isMouseInPreviewBox(mouseX, mouseY) && !isMouseOverButton(mouseX, mouseY)) {
             dragging = true;
             lastMouseX = mouseX;
             lastMouseY = mouseY;
@@ -292,7 +291,7 @@ public class GuiEntityZoomer extends GuiScreen {
     @Override
     protected void mouseClickMove(int mouseX, int mouseY, int clickedMouseButton, long timeSinceLastClick) {
         super.mouseClickMove(mouseX, mouseY, clickedMouseButton, timeSinceLastClick);
-        if (dragging) {
+        if (dragging && clickedMouseButton == 0) {
             int dx = mouseX - lastMouseX;
             int dy = mouseY - lastMouseY;
             rotY -= dx * 0.5F;
@@ -306,7 +305,7 @@ public class GuiEntityZoomer extends GuiScreen {
     public void handleMouseInput() throws IOException {
         super.handleMouseInput();
         int dWheel = org.lwjgl.input.Mouse.getEventDWheel();
-        if (dWheel != 0) {
+        if (dWheel != 0 && isMouseInPreviewBox(org.lwjgl.input.Mouse.getEventX() * this.width / this.mc.displayWidth, this.height - org.lwjgl.input.Mouse.getEventY() * this.height / this.mc.displayHeight - 1)) {
             if (dWheel > 0) {
                 sliderValue = Math.min(1000, sliderValue + 5);
             } else {
@@ -341,6 +340,22 @@ public class GuiEntityZoomer extends GuiScreen {
         offsetY = defaults.offsetY;
         saveConfig();
         initGui();
+    }
+
+    private boolean isMouseInPreviewBox(int mouseX, int mouseY) {
+        int boxSize = Math.min(this.width, this.height) / 2;
+        int boxX = (this.width - boxSize) / 2;
+        int boxY = (this.height - boxSize) / 2;
+        return mouseX >= boxX && mouseX < boxX + boxSize && mouseY >= boxY && mouseY < boxY + boxSize;
+    }
+
+    private boolean isMouseOverButton(int mouseX, int mouseY) {
+        for (GuiButton button : this.buttonList) {
+            if (button.visible && mouseX >= button.x && mouseY >= button.y && mouseX < button.x + button.width && mouseY < button.y + button.height) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private int findExportSizeIndex(int size) {

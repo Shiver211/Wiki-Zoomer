@@ -3,17 +3,23 @@ package com.github.alexthe666.wikizoomer.client;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.client.renderer.OpenGlHelper;
+import net.minecraft.client.renderer.RenderItem;
 import net.minecraft.client.renderer.RenderHelper;
+import net.minecraft.client.renderer.block.model.IBakedModel;
+import net.minecraft.client.renderer.block.model.ItemCameraTransforms;
 import net.minecraft.client.renderer.entity.RenderManager;
+import net.minecraft.client.renderer.texture.TextureMap;
 import net.minecraft.client.resources.I18n;
 import net.minecraft.client.shader.Framebuffer;
 import net.minecraft.client.renderer.texture.TextureUtil;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityList;
 import net.minecraft.entity.EntityLivingBase;
+import net.minecraft.item.ItemBlock;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.text.TextComponentString;
+import net.minecraftforge.client.ForgeHooksClient;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 import org.apache.logging.log4j.LogManager;
@@ -35,7 +41,7 @@ public class ExportManager {
     private static final int DEFAULT_EXPORT_SIZE = 512;
     private static final int[] EXPORT_SIZES = new int[]{64, 128, 256, 512, 1024};
     private static final float DEFAULT_ZOOM = 100F;
-    private static final float ITEM_BASE_SCALE = 16F;
+    private static final float ITEM_BASE_SCALE = 12F;
     private static final Queue<ExportTask> QUEUE = new ArrayDeque<>();
     private static Framebuffer framebuffer;
     private static int batchRemaining = 0;
@@ -70,6 +76,10 @@ public class ExportManager {
     }
 
     public static ExportTask createItemTask(ItemStack stack, float zoomPercent, ExportTask.Background background, int exportSize, boolean isBatch) {
+        return createItemTask(stack, zoomPercent, background, exportSize, isBatch, 0F, 0F);
+    }
+
+    public static ExportTask createItemTask(ItemStack stack, float zoomPercent, ExportTask.Background background, int exportSize, boolean isBatch, float rotX, float rotY) {
         if (stack == null || stack.isEmpty()) {
             return null;
         }
@@ -78,10 +88,14 @@ public class ExportManager {
             return null;
         }
         File output = getOutputFile(id);
-        return ExportTask.forItem(stack, output, background, isBatch, zoomPercent, exportSize);
+        return ExportTask.forItem(stack, output, background, isBatch, zoomPercent, exportSize, rotX, rotY);
     }
 
     public static ExportTask createEntityTask(Entity entity, float zoomPercent, ExportTask.Background background, int exportSize, boolean isBatch, int offsetX, int offsetY) {
+        return createEntityTask(entity, zoomPercent, background, exportSize, isBatch, -30F, 45F, offsetX, offsetY);
+    }
+
+    public static ExportTask createEntityTask(Entity entity, float zoomPercent, ExportTask.Background background, int exportSize, boolean isBatch, float rotX, float rotY, int offsetX, int offsetY) {
         if (entity == null) {
             return null;
         }
@@ -90,15 +104,19 @@ public class ExportManager {
             return null;
         }
         File output = getOutputFile(id);
-        return ExportTask.forEntity(entity, output, background, isBatch, zoomPercent, exportSize, offsetX, offsetY);
+        return ExportTask.forEntity(entity, output, background, isBatch, zoomPercent, exportSize, rotX, rotY, offsetX, offsetY);
     }
 
     public static ExportTask createEntityIdTask(ResourceLocation entityId, float zoomPercent, ExportTask.Background background, int exportSize, boolean isBatch, int offsetX, int offsetY) {
+        return createEntityIdTask(entityId, zoomPercent, background, exportSize, isBatch, -30F, 45F, offsetX, offsetY);
+    }
+
+    public static ExportTask createEntityIdTask(ResourceLocation entityId, float zoomPercent, ExportTask.Background background, int exportSize, boolean isBatch, float rotX, float rotY, int offsetX, int offsetY) {
         if (entityId == null) {
             return null;
         }
         File output = getOutputFile(entityId);
-        return ExportTask.forEntityId(entityId, output, background, isBatch, zoomPercent, exportSize, offsetX, offsetY);
+        return ExportTask.forEntityId(entityId, output, background, isBatch, zoomPercent, exportSize, rotX, rotY, offsetX, offsetY);
     }
 
     public static void tick() {
@@ -176,9 +194,9 @@ public class ExportManager {
             pushedMatrices = true;
             GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
             if (task.type == ExportTask.Type.ITEM) {
-                renderItem(task.itemStack, task.zoomPercent, exportSize);
+                renderItem(task.itemStack, task.zoomPercent, exportSize, task.rotX, task.rotY);
             } else {
-                renderEntity(mc, entity, task.zoomPercent, exportSize, task.offsetX, task.offsetY);
+                renderEntity(mc, entity, task.zoomPercent, exportSize, task.rotX, task.rotY, task.offsetX, task.offsetY);
             }
             boolean transparent = task.background == ExportTask.Background.TRANSPARENT;
             BufferedImage image = readFramebuffer(exportSize, exportSize, framebuffer, transparent);
@@ -216,9 +234,10 @@ public class ExportManager {
         return EntityList.createEntityByIDFromName(task.entityId, mc.world);
     }
 
-    private static void renderItem(ItemStack stack, float zoomPercent, int exportSize) {
+    private static void renderItem(ItemStack stack, float zoomPercent, int exportSize, float rotX, float rotY) {
         float scale = ITEM_BASE_SCALE * (zoomPercent / 100F);
         float zOffset = 200.0F;
+        RenderItem renderItem = Minecraft.getMinecraft().getRenderItem();
         GlStateManager.enableTexture2D();
         GlStateManager.enableAlpha();
         GlStateManager.alphaFunc(516, 0.1F);
@@ -228,13 +247,38 @@ public class ExportManager {
         GlStateManager.pushMatrix();
         GlStateManager.translate(exportSize / 2F, exportSize / 2F, zOffset);
         GlStateManager.scale(scale, scale, scale);
-        RenderHelper.enableGUIStandardItemLighting();
-        Minecraft.getMinecraft().getRenderItem().renderItemAndEffectIntoGUI(stack, -8, -8);
-        RenderHelper.disableStandardItemLighting();
-        GlStateManager.popMatrix();
+        renderItem.zLevel += 50.0F;
+        try {
+            IBakedModel model = renderItem.getItemModelWithOverrides(stack, null, Minecraft.getMinecraft().player);
+            Minecraft.getMinecraft().getTextureManager().bindTexture(TextureMap.LOCATION_BLOCKS_TEXTURE);
+            Minecraft.getMinecraft().getTextureManager().getTexture(TextureMap.LOCATION_BLOCKS_TEXTURE).setBlurMipmap(false, false);
+            GlStateManager.enableRescaleNormal();
+            GlStateManager.translate(0.0F, 0.0F, renderItem.zLevel);
+            GlStateManager.scale(1.0F, -1.0F, 1.0F);
+            GlStateManager.scale(16.0F, 16.0F, 16.0F);
+            if (model.isGui3d()) {
+                GlStateManager.enableLighting();
+            } else {
+                GlStateManager.disableLighting();
+            }
+            RenderHelper.enableGUIStandardItemLighting();
+            model = ForgeHooksClient.handleCameraTransforms(model, ItemCameraTransforms.TransformType.GUI, false);
+            if (stack.getItem() instanceof ItemBlock) {
+                GlStateManager.rotate(rotX, 1.0F, 0.0F, 0.0F);
+                GlStateManager.rotate(rotY, 0.0F, 1.0F, 0.0F);
+            }
+            renderItem.renderItem(stack, model);
+            RenderHelper.disableStandardItemLighting();
+            GlStateManager.disableRescaleNormal();
+            Minecraft.getMinecraft().getTextureManager().bindTexture(TextureMap.LOCATION_BLOCKS_TEXTURE);
+            Minecraft.getMinecraft().getTextureManager().getTexture(TextureMap.LOCATION_BLOCKS_TEXTURE).restoreLastBlurMipmap();
+        } finally {
+            renderItem.zLevel -= 50.0F;
+            GlStateManager.popMatrix();
+        }
     }
 
-    private static void renderEntity(Minecraft mc, Entity entity, float zoomPercent, int exportSize, int offsetX, int offsetY) {
+    private static void renderEntity(Minecraft mc, Entity entity, float zoomPercent, int exportSize, float rotX, float rotY, int offsetX, int offsetY) {
         entity.ticksExisted = 0;
         if (entity instanceof EntityLivingBase) {
             ((EntityLivingBase) entity).rotationYawHead = 0;
@@ -249,17 +293,17 @@ public class ExportManager {
         GlStateManager.enableColorMaterial();
         GlStateManager.pushMatrix();
         float centerX = exportSize / 2F + offsetX;
-        float centerY = exportSize / 2F + (entity.height * scale) / 2F + offsetY;
+        float centerY = exportSize / 2F + offsetY;
         GlStateManager.translate(centerX, centerY, 150.0F + scale);
         GlStateManager.scale(-scale, scale, scale);
-        GlStateManager.rotate(-30.0F, 1.0F, 0.0F, 0.0F);
-        GlStateManager.rotate(135.0F, 0.0F, -1.0F, 0.0F);
+        GlStateManager.rotate(rotX, 1.0F, 0.0F, 0.0F);
+        GlStateManager.rotate(180.0F - rotY, 0.0F, -1.0F, 0.0F);
         GlStateManager.rotate(180.0F, 1.0F, 0.0F, 0.0F);
         RenderHelper.enableStandardItemLighting();
         RenderManager renderManager = mc.getRenderManager();
         renderManager.setPlayerViewY(180.0F);
         renderManager.setRenderShadow(false);
-        renderManager.renderEntity(entity, 0.0D, 0.0D, 0.0D, 0.0F, 1.0F, false);
+        renderManager.renderEntity(entity, 0.0D, -entity.height / 2.0D, 0.0D, 0.0F, 1.0F, false);
         renderManager.setRenderShadow(true);
         GlStateManager.popMatrix();
         RenderHelper.disableStandardItemLighting();
