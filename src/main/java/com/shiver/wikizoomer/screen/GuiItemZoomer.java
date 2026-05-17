@@ -4,7 +4,11 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
 import com.mojang.math.Axis;
 import com.shiver.wikizoomer.client.ExportManager;
+import com.mojang.blaze3d.platform.Lighting;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.renderer.texture.TextureAtlas;
+import net.minecraft.client.resources.model.BakedModel;
 
 import java.lang.reflect.Field;
 import com.shiver.wikizoomer.client.ExportTask;
@@ -18,6 +22,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
+import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
@@ -144,9 +149,10 @@ public class GuiItemZoomer extends Screen {
             guiGraphics.pose().translate(0, 0, 5000F);
             super.render(guiGraphics, mouseX, mouseY, partialTicks);
             guiGraphics.pose().popPose();
-            int i = (this.width - 248) / 2 + 10;
-            int j = (this.height - 166) / 2 + 8;
-            if (mouseX > (i - sliderValue) && mouseX < (i + sliderValue) && mouseY > (j - sliderValue) && mouseY < (j + sliderValue)) {
+            int previewSize = getPreviewSize();
+            int left = (this.width - previewSize) / 2;
+            int top = getPreviewTop(previewSize);
+            if (mouseX > left && mouseX < left + previewSize && mouseY > top && mouseY < top + previewSize) {
                 ItemStack itemStack = zoomerBase.getItem(0);
                 guiGraphics.renderTooltip(this.font, itemStack, mouseX, mouseY);
             }
@@ -172,21 +178,17 @@ public class GuiItemZoomer extends Screen {
     }
 
     private void renderFocus(GuiGraphics guiGraphics) {
-        int i = (this.width - 248) / 2 + 10;
-        int j = (this.height - 166) / 2 + 8;
         ItemStack itemStack = zoomerBase.getItem(0);
-        float scale1 = sliderValue / 100F;
-        float scale = scale1 * 12F;
+        int previewSize = getPreviewSize();
+        float previewScale = previewSize / (float) getExportSize();
+        float scale = sliderValue * 1.92F * previewScale;
         if (!itemStack.isEmpty()) {
             guiGraphics.pose().pushPose();
-            guiGraphics.pose().translate(i, j, 10F);
-            guiGraphics.pose().scale(1.0F, 1.0F, 1.0F);
-            guiGraphics.pose().translate(113.5F - scale1 * 100, 76 - scale1 * 100, 2500F - sliderValue * 20);
-            guiGraphics.pose().scale(scale, scale, scale);
-            guiGraphics.pose().translate(8.0F, 8.0F, 150.0F);
+            guiGraphics.pose().translate(0, 0, 1000F);
+            guiGraphics.pose().translate(this.width / 2.0F, getPreviewTop(previewSize) + previewSize / 2.0F, 100.0F);
+            guiGraphics.pose().scale(scale, -scale, scale);
             guiGraphics.pose().mulPose(Axis.XP.rotationDegrees(rotX));
             guiGraphics.pose().mulPose(Axis.YP.rotationDegrees(rotY));
-            guiGraphics.pose().translate(-8.0F, -8.0F, -150.0F);
 
             TextureAtlas atlas = Minecraft.getInstance().getModelManager().getAtlas(TextureAtlas.LOCATION_BLOCKS);
             try {
@@ -200,17 +202,32 @@ public class GuiItemZoomer extends Screen {
                 mipmapField.setBoolean(atlas, false);
                 atlas.setFilter(false, false);
 
-                guiGraphics.renderItem(Minecraft.getInstance().player, itemStack, 0, 0, 1);
+                renderItemModel(guiGraphics, itemStack);
 
                 blurField.setBoolean(atlas, origBlur);
                 mipmapField.setBoolean(atlas, origMipmap);
                 atlas.setFilter(origBlur, origMipmap);
             } catch (Exception e) {
-                guiGraphics.renderItem(Minecraft.getInstance().player, itemStack, 0, 0, 1);
+                renderItemModel(guiGraphics, itemStack);
             }
 
             guiGraphics.pose().popPose();
         }
+    }
+
+    private void renderItemModel(GuiGraphics guiGraphics, ItemStack itemStack) {
+        Minecraft mc = Minecraft.getInstance();
+        BakedModel model = mc.getItemRenderer().getModel(itemStack, mc.level, null, 0);
+        if (!model.usesBlockLight()) {
+            Lighting.setupForFlatItems();
+        } else {
+            Lighting.setupFor3DItems();
+        }
+        MultiBufferSource.BufferSource bufferSource = mc.renderBuffers().bufferSource();
+        mc.getItemRenderer().render(itemStack, ItemDisplayContext.GUI, false, guiGraphics.pose(), bufferSource, 15728880, OverlayTexture.NO_OVERLAY, model);
+        bufferSource.endBatch();
+        guiGraphics.flush();
+        Lighting.setupFor3DItems();
     }
 
     private void resetSettings() {
