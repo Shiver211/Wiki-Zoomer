@@ -3,7 +3,7 @@ loaderVersion="[47,)" #mandatory (26 is current forge version)
 license="GNU LESSER GENERAL PUBLIC LICENSE"
 [[mods]] #mandatory
 modId="wikizoomer" #mandatory
-version="1.0.3" #mandatory
+version="1.0.4" #mandatory
 displayName="Wiki Zoomer Unofficial" #mandatory
 displayURL="https://github.com/Shiver211/Wiki-Zoomer-Unofficial" #optional
 logoFile="wikizoomer.png" #optional

@@ -21,6 +21,7 @@
   "gui.wikizoomer.background.greenscreen": "Greenscreen",
   "gui.wikizoomer.background.transparent": "Transparent",
   "gui.wikizoomer.resolution": "Resolution: %sx%s",
+  "gui.wikizoomer.resolution_configured": "Resolution: Configured",
   "gui.wikizoomer.batch_select_all": "Select All",
   "gui.wikizoomer.batch_clear": "Clear",
   "gui.wikizoomer.batch_start": "Start Export",

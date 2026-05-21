@@ -97,7 +97,7 @@ public class GuiBatchExport extends Screen {
                 GuiBatchExport.this.zoomPercent = (float)getValue();
             }
         });
-        Button resolutionButton = Button.builder(Component.translatable("gui.wikizoomer.resolution", getExportSize(), getExportSize()), (button) -> {
+        Button resolutionButton = Button.builder(getResolutionLabel(), (button) -> {
             customResolution = true;
             exportSizeIndex = (exportSizeIndex + 1) % EXPORT_SIZES.length;
             init();
@@ -227,6 +227,13 @@ public class GuiBatchExport extends Screen {
 
     private int getExportSize() {
         return EXPORT_SIZES[exportSizeIndex];
+    }
+
+    private Component getResolutionLabel() {
+        if (!customResolution) {
+            return Component.translatable("gui.wikizoomer.resolution_configured");
+        }
+        return Component.translatable("gui.wikizoomer.resolution", getExportSize(), getExportSize());
     }
 
     private Component getBackgroundLabel() {

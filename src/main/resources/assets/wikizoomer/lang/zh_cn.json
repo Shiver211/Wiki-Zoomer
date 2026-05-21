@@ -21,6 +21,7 @@
   "gui.wikizoomer.background.greenscreen": "绿幕",
   "gui.wikizoomer.background.transparent": "透明",
   "gui.wikizoomer.resolution": "分辨率：%sx%s",
+  "gui.wikizoomer.resolution_configured": "分辨率：已配置",
   "gui.wikizoomer.batch_select_all": "全选",
   "gui.wikizoomer.batch_clear": "清除",
   "gui.wikizoomer.batch_start": "开始导出",
